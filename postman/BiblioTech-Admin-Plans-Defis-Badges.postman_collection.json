@@ -1,0 +1,337 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-plans-defis-badges-v1",
+    "name": "BiblioTech — Admin Plans, Défis & Badges (§12)",
+    "description": "Section **12** : plans (`/admin/plans`), défis (`/admin/challenges`), badges (`/admin/badges`).\n\n**Prérequis** : `npm run start:dev`, `npm run db:seed`, compte **ADMIN**.\n\n**Ordre** : `0.1 Login` → Badges (12.9–12.11) → Plans (12.1–12.3) → Défis (12.4–12.8).\n\n**Note plans** : après seed, les 3 types `HEBDOMADAIRE|MENSUEL|ANNUEL` existent déjà → `POST` renvoie **409** ; utilisez `PATCH` pour modifier.\n\n**Variables** : `access_token`, `plan_id`, `badge_id`, `challenge_id`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "plan_id", "value": "" },
+    { "key": "badge_id", "value": "" },
+    { "key": "challenge_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis",
+      "item": [
+        {
+          "name": "0.1 Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12.9–12.11 — Badges",
+      "item": [
+        {
+          "name": "12.9 GET /admin/badges ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) pm.collectionVariables.set('badge_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/badges?page=1&limit=20" }
+        },
+        {
+          "name": "12.10 POST /admin/badges ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('badge_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "icone",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ PNG, JPEG, WebP ou SVG → URL Cloudinary stockée dans icone"
+                },
+                { "key": "nom", "value": "Admin-Test-Badge-{{$timestamp}}", "type": "text" },
+                { "key": "couleur", "value": "#FFD700", "type": "text" },
+                { "key": "points", "value": "15", "type": "text" },
+                { "key": "description", "value": "Badge test §12.10", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/badges"
+          }
+        },
+        {
+          "name": "12.11 PATCH /admin/badges/:id ★",
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "icone",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optionnel : nouvelle icône"
+                },
+                { "key": "points", "value": "20", "type": "text" },
+                { "key": "description", "value": "Mis à jour §12.11", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/badges/{{badge_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12.1–12.3 — Plans",
+      "item": [
+        {
+          "name": "12.1 GET /admin/plans ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const mensuel = (j.data || []).find(p => p.plan === 'MENSUEL');",
+                  "if (mensuel) pm.collectionVariables.set('plan_id', mensuel.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/plans" }
+        },
+        {
+          "name": "12.2 POST /admin/plans — doublon (→ 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('409', () => pm.response.to.have.status(409));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"MENSUEL\",\n  \"prix\": 5000,\n  \"duree_jours\": 30\n}"
+            },
+            "url": "{{baseUrl}}/admin/plans"
+          }
+        },
+        {
+          "name": "12.2 POST /admin/plans — prix < 100 (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"HEBDOMADAIRE\",\n  \"prix\": 50,\n  \"duree_jours\": 7\n}"
+            },
+            "url": "{{baseUrl}}/admin/plans"
+          }
+        },
+        {
+          "name": "12.3 PATCH /admin/plans/:id ★",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prix\": 5100,\n  \"statut\": \"ACTIF\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/plans/{{plan_id}}"
+          }
+        },
+        {
+          "name": "12.3 PATCH — INACTIF (masqué /plans public)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"statut\": \"INACTIF\"\n}" },
+            "url": "{{baseUrl}}/admin/plans/{{plan_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12.4–12.8 — Défis",
+      "item": [
+        {
+          "name": "12.4 GET /admin/challenges ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) pm.collectionVariables.set('challenge_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/challenges?statut=ACTIF&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "challenges"],
+              "query": [
+                { "key": "statut", "value": "ACTIF" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12.5 POST /admin/challenges — NB_LIVRES ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const start = new Date();",
+                  "const end = new Date();",
+                  "end.setDate(end.getDate() + 60);",
+                  "pm.collectionVariables.set('defi_date_debut', start.toISOString());",
+                  "pm.collectionVariables.set('defi_date_fin', end.toISOString());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('challenge_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Admin — Lire 3 livres\",\n  \"type\": \"NB_LIVRES\",\n  \"objectif_valeur\": 3,\n  \"badge_id\": \"{{badge_id}}\",\n  \"date_debut\": \"{{defi_date_debut}}\",\n  \"date_fin\": \"{{defi_date_fin}}\",\n  \"description\": \"Défi test NB_LIVRES\",\n  \"points_bonus\": 10\n}"
+            },
+            "url": "{{baseUrl}}/admin/challenges"
+          }
+        },
+        {
+          "name": "12.6 PATCH /admin/challenges/:id ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const end = new Date();",
+                  "end.setDate(end.getDate() + 90);",
+                  "pm.collectionVariables.set('defi_date_fin', end.toISOString());"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"Admin — Lire 3 livres (modifié)\",\n  \"objectif_valeur\": 4,\n  \"date_fin\": \"{{defi_date_fin}}\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/challenges/{{challenge_id}}"
+          }
+        },
+        {
+          "name": "12.8 GET /admin/challenges/:id/participants ★",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/challenges/{{challenge_id}}/participants?page=1&limit=20"
+          }
+        },
+        {
+          "name": "12.7 PATCH /admin/challenges/:id/cancel ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().statut).to.eql('ANNULE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/challenges/{{challenge_id}}/cancel"
+          }
+        }
+      ]
+    }
+  ]
+}

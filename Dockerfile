@@ -1,19 +1,79 @@
-FROM node:20-alpine AS deps
+# syntax=docker/dockerfile:1
+
+# ─── Base ─────────────────────────────────────────────────────────────────────
+FROM node:22-alpine AS base
+
+RUN apk add --no-cache libc6-compat openssl
+
 WORKDIR /app
-COPY package.json package-lock.json* ./
+
+# ─── Dépendances (cache layer) ────────────────────────────────────────────────
+FROM base AS deps
+
+COPY package.json package-lock.json ./
+
 RUN npm ci
 
-FROM node:20-alpine AS builder
-WORKDIR /app
+# ─── Build production ─────────────────────────────────────────────────────────
+FROM base AS builder
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
+# ─── Dépendances production (+ CLI Prisma pour migrations au démarrage) ───────
+FROM base AS prod-deps
+
+COPY package.json package-lock.json ./
+
+RUN npm ci --omit=dev \
+  && npm install prisma@7.8.0 --no-save
+
+# ─── Image production ─────────────────────────────────────────────────────────
+FROM base AS production
+
 ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY package.json ./
+COPY --from=builder /app/generated ./generated
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY docker/entrypoint.prod.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh \
+  && addgroup -g 1001 -S nodejs \
+  && adduser -S nestjs -u 1001 -G nodejs \
+  && chown -R nestjs:nodejs /app
+
+USER nestjs
+
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+# ─── Image développement (docker-compose.yml) ───────────────────────────────────
+FROM base AS development
+
+ENV NODE_ENV=development
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+COPY docker/entrypoint.dev.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 3000
+
+ENTRYPOINT ["/entrypoint.sh"]

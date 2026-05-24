@@ -1,0 +1,482 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-books-v2",
+    "name": "BiblioTech — Admin Livres (V2)",
+    "description": "Collection **V2** — section 9 Admin Livres avec **upload Cloudinary** (multipart/form-data).\n\n- `file` : livre INTERNE (PDF/EPUB/MOBI → Cloudinary raw)\n- `couverture` : image PNG/JPEG/WebP/SVG → `couverture_url`\n- `PATCH` : remplacement optionnel de `file` et/ou `couverture`\n\n**Prérequis**\n1. `npm run start:dev` + `CLOUDINARY_URL` dans `.env`\n2. Compte `role=ADMIN` (SQL ou création via Admin Users)\n3. `npm run db:seed` pour catégories/auteurs/livres de test\n\n**Ordre** : dossier `0` → `9.2` (choisir un fichier pour INTERNE) → reste.\n\nVariables : baseUrl, admin_email, admin_password, access_token, book_id, categorie_id, auteur_id",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "categorie_id", "value": "" },
+    { "key": "auteur_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const noAuth = ['0.1 Login admin'];",
+          "if (noAuth.includes(pm.info.requestName)) return;",
+          "if (!pm.collectionVariables.get('access_token')) {",
+          "  console.warn('Lancez 0.1 Login admin pour remplir access_token.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "description": "Premier admin : `UPDATE auth SET role='ADMIN', statut='ACTIF', email_verified=true WHERE email='...';`",
+      "item": [
+        {
+          "name": "0.1 Login admin → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.user) console.log('role:', json.user.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 GET /admin/books → IDs",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) {",
+                  "  throw new Error('Exécutez 0.1 Login admin d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data[0]) {",
+                  "  pm.collectionVariables.set('book_id', j.data[0].id);",
+                  "  if (j.data[0].categories?.[0]) pm.collectionVariables.set('categorie_id', j.data[0].categories[0].id);",
+                  "  if (j.data[0].auteurs?.[0]) pm.collectionVariables.set('auteur_id', j.data[0].auteurs[0].id);",
+                  "  console.log('book_id:', j.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?limit=5" }
+        }
+      ]
+    },
+    {
+      "name": "9.1 — Liste",
+      "item": [
+        {
+          "name": "GET /admin/books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('pagination', () => pm.expect(j).to.have.keys('data','meta'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?page=1&limit=20" }
+        },
+        {
+          "name": "GET /admin/books?statut=PUBLIE&type_livre=INTERNE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/books?statut=PUBLIE&type_livre=INTERNE",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "books"],
+              "query": [
+                { "key": "statut", "value": "PUBLIE" },
+                { "key": "type_livre", "value": "INTERNE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/books?q=SEED",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/books?q=SEED",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "books"],
+              "query": [{ "key": "q", "value": "SEED" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.2 — Créer (Cloudinary)",
+      "description": "INTERNE : **form-data** — `file` (PDF/EPUB/MOBI) ; optionnel `couverture` (PNG/JPEG/WebP/SVG → Cloudinary). Ne pas mettre Content-Type manuellement.",
+      "item": [
+        {
+          "name": "POST /admin/books — INTERNE + file ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Login admin requis (0.1).');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('livre INTERNE', () => {",
+                  "  pm.expect(j.type_livre).to.eql('INTERNE');",
+                  "  pm.expect(j.statut).to.eql('PUBLIE');",
+                  "});",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('book_id', j.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Obligatoire : PDF, EPUB ou MOBI (max 50 Mo)"
+                },
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optionnel : couverture PNG/JPEG/WebP/SVG"
+                },
+                { "key": "titre", "value": "Livre V2 test INTERNE", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" },
+                { "key": "is_downloadable", "value": "true", "type": "text" },
+                { "key": "isbn", "value": "978-V2-ADMIN-01", "type": "text" },
+                {
+                  "key": "resume",
+                  "value": "Upload Cloudinary via Postman V2.",
+                  "type": "text"
+                },
+                { "key": "langue", "value": "Français", "type": "text" },
+                { "key": "nombre_pages", "value": "120", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "POST /admin/books — EXTERNE (sans file)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().type_livre).to.eql('EXTERNE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Livre V2 test EXTERNE", "type": "text" },
+                { "key": "type_livre", "value": "EXTERNE", "type": "text" },
+                {
+                  "key": "url_externe_livre",
+                  "value": "https://example.com/livres/v2-externe",
+                  "type": "text"
+                },
+                { "key": "isbn", "value": "978-V2-ADMIN-02", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "POST /admin/books — INTERNE sans file (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Sans fichier", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "POST /admin/books — EXTERNE avec file (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Ne doit pas être envoyé pour EXTERNE"
+                },
+                { "key": "titre", "value": "Invalide EXTERNE", "type": "text" },
+                { "key": "type_livre", "value": "EXTERNE", "type": "text" },
+                {
+                  "key": "url_externe_livre",
+                  "value": "https://example.com/x",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.3 — Modifier",
+      "item": [
+        {
+          "name": "PATCH /admin/books/:id — métadonnées",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('updatedAt');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "titre",
+                  "value": "Livre V2 INTERNE (modifié)",
+                  "type": "text"
+                },
+                { "key": "resume", "value": "PATCH métadonnées V2.", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "PATCH /admin/books/:id — remplacer fichier ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Nouveau PDF/EPUB/MOBI (livre INTERNE uniquement)"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "PATCH /admin/books/:id — remplacer couverture",
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "PNG, JPEG, WebP ou SVG"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.4 — Archiver",
+      "item": [
+        {
+          "name": "PATCH /admin/books/:id/archive",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().statut).to.eql('ARCHIVE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/archive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.5 — Catégories (REPLACE ALL)",
+      "item": [
+        {
+          "name": "POST /admin/books/:id/categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('categories');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorie_ids\": [\"{{categorie_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/categories"
+          }
+        },
+        {
+          "name": "POST /admin/books/:id/categories — vider []",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"categorie_ids\": []\n}" },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.6 — Auteurs (REPLACE ALL)",
+      "item": [
+        {
+          "name": "POST /admin/books/:id/authors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('auteurs');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auteur_ids\": [\"{{auteur_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/authors"
+          }
+        }
+      ]
+    }
+  ]
+}

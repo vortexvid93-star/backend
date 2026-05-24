@@ -1,0 +1,443 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-libraries-v1",
+    "name": "BiblioTech — Admin Bibliothèques (§10)",
+    "description": "Section **10 — Admin — Bibliothèques** : CRUD, archivage, ajout/retrait de livres (table `appartient`).\n\n**Prérequis**\n1. `npm run start:dev`\n2. `npm run db:seed` (bibliothèques SEED + livres)\n3. Compte **ADMIN** (`role=ADMIN`, `statut=ACTIF`)\n\n**Ordre recommandé** : `0.1 Login` → `10.1 Liste` → `10.2 Créer INTERNE` → `10.5 Ajouter livres` → `10.6 Retirer` → `10.3 Modifier` → `10.4 Archiver`.\n\n**Variables** : `baseUrl`, `admin_email`, `admin_password`, `access_token`, `library_id`, `library_interne_id`, `book_id`.\n\n**Schéma** : contrainte `chk_bibliotheque_url` — INTERNE sans `url_externe`, EXTERNE avec `url_externe` obligatoire.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "library_id", "value": "" },
+    { "key": "library_interne_id", "value": "" },
+    { "key": "book_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const noAuth = ['0.1 Login admin'];",
+          "if (noAuth.includes(pm.info.requestName)) return;",
+          "if (!pm.collectionVariables.get('access_token')) {",
+          "  console.warn('Lancez 0.1 Login admin pour remplir access_token.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "description": "Premier admin : `UPDATE auth SET role='ADMIN', statut='ACTIF', email_verified=true WHERE email='...';`",
+      "item": [
+        {
+          "name": "0.1 Login admin → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.user) console.log('role:', json.user.role);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 GET /admin/books → book_id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) {",
+                  "  throw new Error('Exécutez 0.1 Login admin d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) {",
+                  "  pm.collectionVariables.set('book_id', j.data[0].id);",
+                  "  console.log('book_id:', j.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?limit=3&q=SEED" }
+        }
+      ]
+    },
+    {
+      "name": "10.1 — Liste des bibliothèques",
+      "item": [
+        {
+          "name": "GET /admin/libraries ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('pagination', () => pm.expect(j).to.have.keys('data', 'meta'));",
+                  "const interne = (j.data || []).find(b => b.type === 'INTERNE');",
+                  "const any = j.data?.[0];",
+                  "if (any) pm.collectionVariables.set('library_id', any.id);",
+                  "if (interne) pm.collectionVariables.set('library_interne_id', interne.id);",
+                  "console.log('library_interne_id:', interne?.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/libraries?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "libraries"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/libraries?statut=ACTIVE&type=INTERNE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/libraries?statut=ACTIVE&type=INTERNE",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "libraries"],
+              "query": [
+                { "key": "statut", "value": "ACTIVE" },
+                { "key": "type", "value": "INTERNE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/libraries?statut=ARCHIVEE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/libraries?statut=ARCHIVEE",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "libraries"],
+              "query": [{ "key": "statut", "value": "ARCHIVEE" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10.2 — Créer une bibliothèque",
+      "item": [
+        {
+          "name": "POST /admin/libraries — INTERNE ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('INTERNE', () => pm.expect(j.type).to.eql('INTERNE'));",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('library_id', j.id);",
+                  "  pm.collectionVariables.set('library_interne_id', j.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin test — Bibliothèque interne\",\n  \"type\": \"INTERNE\",\n  \"description\": \"Créée via Postman §10.2\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries"
+          }
+        },
+        {
+          "name": "POST /admin/libraries — EXTERNE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.expect(pm.response.json().type).to.eql('EXTERNE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin test — Partenaire externe\",\n  \"type\": \"EXTERNE\",\n  \"url_externe\": \"https://example.com/catalogue-admin-test\",\n  \"description\": \"Lien vers catalogue tiers\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries"
+          }
+        },
+        {
+          "name": "POST /admin/libraries — EXTERNE sans url (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Invalide EXTERNE\",\n  \"type\": \"EXTERNE\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries"
+          }
+        },
+        {
+          "name": "POST /admin/libraries — INTERNE avec url (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Invalide INTERNE\",\n  \"type\": \"INTERNE\",\n  \"url_externe\": \"https://example.com/should-not-be-here\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10.3 — Modifier une bibliothèque",
+      "item": [
+        {
+          "name": "PATCH /admin/libraries/:id ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('library_id')) {",
+                  "  throw new Error('Exécutez 10.2 ou 10.1 pour obtenir library_id.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('updatedAt');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin test — Bibliothèque interne (modifiée)\",\n  \"description\": \"Mise à jour PATCH §10.3\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries/{{library_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10.4 — Archiver une bibliothèque",
+      "item": [
+        {
+          "name": "PATCH /admin/libraries/:id/archive ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('library_id')) {",
+                  "  throw new Error('library_id manquant — créez ou listez une bibliothèque.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().statut).to.eql('ARCHIVEE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/libraries/{{library_id}}/archive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10.5 — Ajouter des livres (INTERNE)",
+      "item": [
+        {
+          "name": "POST /admin/libraries/:id/books ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const lib = pm.collectionVariables.get('library_interne_id');",
+                  "const book = pm.collectionVariables.get('book_id');",
+                  "if (!lib) throw new Error('library_interne_id manquant (10.1 ou 10.2 INTERNE).');",
+                  "if (!book) throw new Error('book_id manquant (0.2).');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('added');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"livre_ids\": [\"{{book_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries/{{library_interne_id}}/books"
+          }
+        },
+        {
+          "name": "POST /admin/libraries/:id/books — doublon (added=0)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('doublon ignoré', () => pm.expect(pm.response.json().added).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"livre_ids\": [\"{{book_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/libraries/{{library_interne_id}}/books"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10.6 — Retirer un livre",
+      "item": [
+        {
+          "name": "DELETE /admin/libraries/:bibId/books/:bookId ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('library_interne_id')) throw new Error('library_interne_id requis');",
+                  "if (!pm.collectionVariables.get('book_id')) throw new Error('book_id requis');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().message).to.include('supprimee');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/libraries/{{library_interne_id}}/books/{{book_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}

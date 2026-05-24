@@ -1,0 +1,224 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-libraries-v2",
+    "name": "BiblioTech — Bibliothèques API (v2.4)",
+    "description": "Bibliothèques : liste, détail, stats, catégories, livres (métadonnées + ma_progression).\n\n**Recherche `q`** : titre, ISBN, résumé, langue, auteurs — **pas** le contenu du fichier hébergé.\n\n**Import** : `postman/BiblioTech-Libraries.postman_collection.json`\n\n**Prérequis** : `npm run start:dev`, `npm run db:seed`, **0.1 Login**.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "library_id", "value": "" },
+    { "key": "book_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT)",
+      "item": [
+        {
+          "name": "0.1 Login → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "P2 — Vue globale",
+      "item": [
+        {
+          "name": "GET /libraries/summary",
+          "request": { "method": "GET", "url": "{{baseUrl}}/libraries/summary" }
+        },
+        {
+          "name": "GET /libraries?q= &sort=nb_livres",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.json().data?.[0]) {",
+                  "  pm.collectionVariables.set('library_id', pm.response.json().data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/libraries?q=SEED&sort=nb_livres&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["libraries"],
+              "query": [
+                { "key": "q", "value": "SEED" },
+                { "key": "sort", "value": "nb_livres", "description": "nom | nb_livres" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.1 — Liste",
+      "item": [
+        {
+          "name": "GET /libraries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) pm.collectionVariables.set('library_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/libraries?page=1&limit=20&sort=nom"
+          }
+        },
+        {
+          "name": "GET /libraries?type=INTERNE",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/libraries?type=INTERNE&page=1&limit=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3.2 — Détail & stats",
+      "item": [
+        {
+          "name": "GET /libraries/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.test('nb_livres + livres_populaires', () => {",
+                  "  pm.expect(j).to.have.property('nb_livres');",
+                  "  pm.expect(j).to.have.property('livres_populaires');",
+                  "  pm.expect(j).to.have.property('acces_livres');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/libraries/{{library_id}}" }
+        },
+        {
+          "name": "GET /libraries/:id/stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/libraries/{{library_id}}/stats" }
+        },
+        {
+          "name": "GET /libraries/:id/categories",
+          "request": { "method": "GET", "url": "{{baseUrl}}/libraries/{{library_id}}/categories" }
+        }
+      ]
+    },
+    {
+      "name": "3.3 — Livres (INTERNE)",
+      "item": [
+        {
+          "name": "GET /libraries/:id/books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) {",
+                  "  pm.collectionVariables.set('book_id', j.data[0].id);",
+                  "  pm.test('ma_progression présent', () => {",
+                  "    pm.expect(j.data[0]).to.have.property('ma_progression');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/libraries/{{library_id}}/books?page=1&limit=20&sort=recent",
+              "host": ["{{baseUrl}}"],
+              "path": ["libraries", "{{library_id}}", "books"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "recent" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /libraries/:id/books?q= (métadonnées)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/libraries/{{library_id}}/books?q=roman&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["libraries", "{{library_id}}", "books"],
+              "query": [
+                { "key": "q", "value": "roman", "description": "titre, ISBN, résumé, langue, auteurs" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /libraries/:id/books?is_downloadable=true",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/libraries/{{library_id}}/books?is_downloadable=true&page=1&limit=10"
+          }
+        },
+        {
+          "name": "GET /libraries/:id/books/in-progress",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/libraries/{{library_id}}/books/in-progress?page=1&limit=10"
+          }
+        }
+      ]
+    }
+  ]
+}

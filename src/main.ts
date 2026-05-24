@@ -1,69 +1,61 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import helmet from 'helmet';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { setupSwagger } from './common/swagger/setup-swagger';
+
+const DEFAULT_DEV_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:4200',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+];
+
+function resolveCorsOptions(): {
+  origin: boolean | string[];
+  credentials: boolean;
+} {
+  const raw = process.env.CORS_ORIGINS?.trim();
+
+  if (raw === '*') {
+    return { origin: true, credentials: true };
+  }
+
+  if (raw) {
+    const origins = raw
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+    return { origin: origins.length > 0 ? origins : true, credentials: true };
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return { origin: [], credentials: true };
+  }
+
+  return { origin: DEFAULT_DEV_ORIGINS, credentials: true };
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = parseInt(process.env.PORT ?? '3000', 10);
 
-  app.setGlobalPrefix('api');
+  const cors = resolveCorsOptions();
+  app.enableCors({
+    origin: cors.origin,
+    credentials: cors.credentials,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Location'],
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
-
-  app.use(helmet());
-  app.use(compression());
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 300,
-    }),
-  );
-
-  app.enableCors({
-    origin: [
-      'http://localhost:3001',
-      /^https?:\/\/localhost(:\d+)?$/,
-      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-      /^exp:\/\//,
-    ],
-    credentials: true,
-  });
-
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('BiblioTech API')
-    .setDescription('API REST — Bibliothèque Numérique')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('Auth')
-    .addTag('Users')
-    .addTag('Catalogue')
-    .addTag('Subscriptions')
-    .addTag('Payments')
-    .addTag('Reviews')
-    .addTag('Notifications')
-    .addTag('Analytics')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
-
-  await app.listen(port);
-  Logger.log(`Application is running on: http://localhost:${port}/api`, 'Bootstrap');
-  Logger.log(`Swagger UI: http://localhost:${port}/api/docs`, 'Bootstrap');
+  setupSwagger(app);
+  await app.listen(process.env.PORT ?? 3000);
 }
-
 bootstrap();

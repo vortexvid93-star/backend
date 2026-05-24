@@ -1,0 +1,4734 @@
+{
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "info": {
+    "_postman_id": "bibliotech-complet-tests-v1",
+    "name": "BiblioTech — Tests complets API",
+    "description": "Collection **unique** couvrant tous les endpoints BiblioTech v2.\n\n## Paiements = **PawaPay** (intégration réelle)\n`.env` : `PAYMENT_PROVIDER=pawapay` + `PAWAPAY_API_TOKEN` + **ngrok** sur `PAWAPAY_PUBLIC_BASE_URL`.\nDashboard PawaPay → Deposits : `{publicBaseUrl}/api/webhooks/pawapay/deposits`\n\nLe dossier **06 — Paiements PawaPay** teste le vrai flux Mobile Money (sandbox).\nLe dossier **11 — Mock (optionnel)** existe seulement si `PAYMENT_PROVIDER=mock` (sans ngrok).\n\n## Démarrage\n1. `npm run start:dev` + seed + ngrok → copier l’URL dans `publicBaseUrl`\n2. Login utilisateur (dossier 00)\n3. Dossier **06** puis **10** (E2E PawaPay : attendre ~20 s avant GET /payments/status)\n\n## Variables\n`access_token`, `publicBaseUrl`, `phonenumber`, `ref_transaction`, `deposit_id`, …",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "user_email",
+      "value": "password@biblio.tech"
+    },
+    {
+      "key": "user_password",
+      "value": "MonMotDePasse123"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@biblio.tech"
+    },
+    {
+      "key": "admin_password",
+      "value": "MonMotDePasse123"
+    },
+    {
+      "key": "otp_email",
+      "value": "otp@biblio.tech"
+    },
+    {
+      "key": "otp_code",
+      "value": "123456"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "admin_access_token",
+      "value": ""
+    },
+    {
+      "key": "book_id",
+      "value": ""
+    },
+    {
+      "key": "library_id",
+      "value": ""
+    },
+    {
+      "key": "plan_id",
+      "value": ""
+    },
+    {
+      "key": "ref_transaction",
+      "value": ""
+    },
+    {
+      "key": "lecture_token",
+      "value": ""
+    },
+    {
+      "key": "challenge_id",
+      "value": ""
+    },
+    {
+      "key": "badge_id",
+      "value": ""
+    },
+    {
+      "key": "recommendation_id",
+      "value": ""
+    },
+    {
+      "key": "notification_id",
+      "value": ""
+    },
+    {
+      "key": "comment_id",
+      "value": ""
+    },
+    {
+      "key": "category_id",
+      "value": ""
+    },
+    {
+      "key": "author_id",
+      "value": ""
+    },
+    {
+      "key": "target_user_id",
+      "value": ""
+    },
+    {
+      "key": "admin_plan_id",
+      "value": ""
+    },
+    {
+      "key": "admin_badge_id",
+      "value": ""
+    },
+    {
+      "key": "publicBaseUrl",
+      "value": "https://VOTRE-ID.ngrok-free.app"
+    },
+    {
+      "key": "phonenumber",
+      "value": "242063456789"
+    },
+    {
+      "key": "phonenumber_mtn",
+      "value": "242063456789"
+    },
+    {
+      "key": "phonenumber_airtel",
+      "value": "242053456789"
+    },
+    {
+      "key": "provider",
+      "value": "MTN_MOMO_COG"
+    },
+    {
+      "key": "deposit_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 — Prérequis (à lancer en premier)",
+      "description": "Connexion + remplissage des tokens.",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('DB up', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().database).to.eql('up');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET / (ping)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login utilisateur → access_token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/login",
+            "description": "Compte seed ou créé via register/password. Si 404 → créer le compte (dossier 01).",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "  if (j.refresh_token) pm.collectionVariables.set('refresh_token', j.refresh_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login admin → admin_access_token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/login",
+            "description": "SQL: UPDATE auth SET role='ADMIN', statut='ACTIF' WHERE email='{{admin_email}}';",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('admin_access_token', j.access_token.trim());",
+                  "  pm.test('Role ADMIN', () => pm.expect(j.user?.role).to.eql('ADMIN'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /plans → plan_id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/plans",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const p = j.data?.[0] || j;",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books → book_id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books?page=1&limit=5",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('book_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries → library_id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries?page=1&limit=5",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('library_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 — Auth",
+      "description": "Routes publiques sauf logout/refresh (tokens dans body).",
+      "item": [
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otp_email}}\",\n  \"nom\": \"Test\",\n  \"prenom\": \"OTP\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register/password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register/password",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@biblio.tech\",\n  \"nom\": \"Nouveau\",\n  \"prenom\": \"User\",\n  \"password\": \"MonMotDePasse123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/otp/request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/otp/request",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otp_email}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/otp/verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/otp/verify",
+            "description": "Récupérer le code dans les logs serveur ou email Resend.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otp_email}}\",\n  \"code\": \"{{otp_code}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "  if (j.refresh_token) pm.collectionVariables.set('refresh_token', j.refresh_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/password/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/login",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "  if (j.refresh_token) pm.collectionVariables.set('refresh_token', j.refresh_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/password/reset/request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/reset/request",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/password/reset/confirm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/reset/confirm",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"code\": \"{{otp_code}}\",\n  \"newPassword\": \"MonMotDePasse123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/token/refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/token/refresh",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "  if (j.refresh_token) pm.collectionVariables.set('refresh_token', j.refresh_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/google (manuel)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/google",
+            "description": "Optionnel — nécessite un vrai id_token Google.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"COLLEZ_ID_TOKEN_GOOGLE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/google/link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/google/link",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"COLLEZ_ID_TOKEN_GOOGLE\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/password/add",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/add",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"MonMotDePasse123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/password/change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/change",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{user_password}}\",\n  \"newPassword\": \"MonMotDePasse123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 — Profil /me",
+      "description": "JWT utilisateur actif.",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/dashboard",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/reading",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/reading?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/activity?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/completion",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/completion",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/actions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/actions",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/me",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Profil test Postman\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/badges/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/badges/summary",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/badges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/badges",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/challenges/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/challenges/summary",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/challenges",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/challenges/:defiId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/challenges/{{challenge_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/stats",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/stats/reading",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/stats/reading",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/stats/social",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/stats/social",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/comments?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/ratings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/ratings?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /me/photo (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/me/photo",
+            "description": "Nécessite CLOUDINARY_URL. Sélectionner un fichier sur le champ file.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Sélectionner une image JPG/PNG"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /me/photo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/me/photo",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "03 — Bibliothèques",
+      "description": "",
+      "item": [
+        {
+          "name": "GET /libraries/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/summary",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/{{library_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries/:id/stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/{{library_id}}/stats",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries/:id/categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/{{library_id}}/categories",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries/:id/books/in-progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/{{library_id}}/books/in-progress",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /libraries/:id/books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/libraries/{{library_id}}/books?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "04 — Livres & lecture",
+      "description": "Abonnement actif requis pour /access. Type: LECTURE | TELECHARGEMENT",
+      "item": [
+        {
+          "name": "GET /books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books?page=1&limit=10&sort=recent",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books?q=SEED",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books?q=SEED&limit=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/access/recent",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/access/recent?page=1&limit=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/resource",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/resource",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/similar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/similar?limit=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/challenges",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/access/check?type=LECTURE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=LECTURE",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/access/active?type=LECTURE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/access/active?type=LECTURE",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /books/:id/access?type=LECTURE",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('lecture_token', j.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/stream?validate=true",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}&validate=true",
+            "description": "Pas de Bearer — jeton lecture en query (?token=).",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/access?type=TELECHARGEMENT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=TELECHARGEMENT",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/progress",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /books/:id/progress",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/books/{{book_id}}/progress",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page_actuelle\": 5,\n  \"duree_lecture_min\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /books/:id/comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/comments?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /books/:id/comments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/books/{{book_id}}/comments",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contenu\": \"Commentaire test Postman\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('comment_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /books/:id/comments/:commentId",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/books/{{book_id}}/comments/{{comment_id}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contenu\": \"Commentaire modifié\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /books/:id/rate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/books/{{book_id}}/rate",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valeur\": 4\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /books/:id/rate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/books/{{book_id}}/rate",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valeur\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "05 — Plans & abonnements",
+      "description": "",
+      "item": [
+        {
+          "name": "GET /plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/plans",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /plans/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/plans/{{plan_id}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/current",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/current",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/upcoming",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/upcoming",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/summary",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/compare",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/compare",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/history?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "06 — Paiements PawaPay (intégration réelle)",
+      "description": "`.env` : PAYMENT_PROVIDER=pawapay, PAWAPAY_API_TOKEN, PAWAPAY_PUBLIC_BASE_URL (= publicBaseUrl ngrok). Callback dashboard → /api/webhooks/pawapay/deposits. Sandbox : callback COMPLETED auto en ~3–20 s.",
+      "item": [
+        {
+          "name": "GET webhook deposits (ping ngrok)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}{{publicBaseUrl}}/api/webhooks/pawapay/deposits",
+            "description": "Doit répondre 200. Si échec → ngrok arrêté ou publicBaseUrl incorrect.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/checkout-preview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/checkout-preview?plan_id={{plan_id}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /payments/init — MTN (MTN_MOMO_COG)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/init",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber_mtn}}\",\n  \"operator\": \"MTN_MOMO_COG\",\n  \"country\": \"CG\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.ref_transaction) pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "if (j.pawapay?.deposit_id) pm.collectionVariables.set('deposit_id', j.pawapay.deposit_id);",
+                  "console.log('PawaPay init — ref:', j.ref_transaction, '| deposit:', j.pawapay?.deposit_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /payments/init — Airtel (AIRTEL_COG)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/init",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber_airtel}}\",\n  \"operator\": \"AIRTEL_COG\",\n  \"country\": \"CG\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.ref_transaction) pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "if (j.pawapay?.deposit_id) pm.collectionVariables.set('deposit_id', j.pawapay.deposit_id);",
+                  "console.log('PawaPay init — ref:', j.ref_transaction, '| deposit:', j.pawapay?.deposit_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /payments/init — auto opérateur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/init",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber}}\",\n  \"country\": \"CG\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.ref_transaction) pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "if (j.pawapay?.deposit_id) pm.collectionVariables.set('deposit_id', j.pawapay.deposit_id);",
+                  "console.log('PawaPay init — ref:', j.ref_transaction, '| deposit:', j.pawapay?.deposit_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/pending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/pending",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/status (sync API PawaPay)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/status?transaction_id={{ref_transaction}}",
+            "description": "Lancer 20–30 s après init (callback + réconciliation auto backend). Statut attendu : SUCCES.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/return",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/return?transaction_id={{ref_transaction}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /subscriptions/current (après paiement)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/current",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST callback dépôt COMPLETED (test manuel)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/webhooks/pawapay/deposits",
+            "description": "Si le callback sandbox n’arrive pas : simuler le webhook PawaPay à la main.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"{{deposit_id}}\",\n  \"status\": \"COMPLETED\",\n  \"clientReferenceId\": \"{{ref_transaction}}\",\n  \"amount\": \"4900\",\n  \"currency\": \"XAF\",\n  \"country\": \"COG\",\n  \"payer\": {\n    \"type\": \"MMO\",\n    \"accountDetails\": {\n      \"phoneNumber\": \"{{phonenumber}}\",\n      \"provider\": \"{{provider}}\"\n    }\n  },\n  \"created\": \"2025-05-15T07:38:56Z\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "07 — Découverte",
+      "description": "",
+      "item": [
+        {
+          "name": "POST /recommendations/refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recommendations/refresh",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"limit\": 30\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) {",
+                  "  pm.collectionVariables.set('recommendation_id', j.data[0].id);",
+                  "  if (j.data[0].livre?.id) pm.collectionVariables.set('book_id', j.data[0].livre.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/summary",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations/picks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/picks?limit=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations/by-reason",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/by-reason",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations/for-book/:livreId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/for-book/{{book_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /recommendations/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /recommendations/:id/interact",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}/interact",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"VIEW\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /recommendations/:id/dismiss",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}/dismiss",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /recommendations/mark-all-seen",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/recommendations/mark-all-seen",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/search?q=SEED&page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /search/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/search/history",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /search/history/:id/click",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/search/history/{{search_history_id}}/click",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notifications?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('notification_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /notifications/read-all",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/notifications/read-all",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /notifications/:id/read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/notifications/{{notification_id}}/read",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "08 — Gamification",
+      "description": "",
+      "item": [
+        {
+          "name": "GET /gamification/overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/gamification/overview",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('challenge_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges/recommended",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/recommended",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges/expiring",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/expiring",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges/:id/stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/stats",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /challenges/:id/progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/progress",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /challenges/:id/join",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /challenges/:id/join",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /badges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/badges",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const list = j.data || j;",
+                  "if (Array.isArray(list) && list[0]?.id) pm.collectionVariables.set('badge_id', list[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /badges/next",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/badges/next",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /badges/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/badges/{{badge_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /badges/:id/path",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/badges/{{badge_id}}/path",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "09 — Admin",
+      "description": "JWT role ADMIN. Création livre : sélectionner un fichier PDF sur POST /admin/books.",
+      "item": [
+        {
+          "name": "GET /admin/users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/users?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const u = j.data?.find(x => x.role === 'USER') || j.data?.[0];",
+                  "if (u?.id) pm.collectionVariables.set('target_user_id', u.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/users/:id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/users/{{target_user_id}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /admin/users/:id/ban",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/users/{{target_user_id}}/ban",
+            "description": "Ne pas bannir votre compte de test principal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motif\": \"Test modération\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/books?page=1&limit=5",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/libraries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/libraries?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/auteurs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/auteurs?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.json().data?.[0]?.id) pm.collectionVariables.set('author_id', pm.response.json().data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/categories?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "if (pm.response.json().data?.[0]?.id) pm.collectionVariables.set('category_id', pm.response.json().data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/plans",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const p = j.data?.[0] || j[0];",
+                  "if (p?.id) pm.collectionVariables.set('admin_plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/challenges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/challenges?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/badges",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/badges",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const b = j.data?.[0] || j[0];",
+                  "if (b?.id) pm.collectionVariables.set('admin_badge_id', b.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/comments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/comments?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/subscriptions?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/payments?page=1&limit=10",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats/dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/stats/dashboard",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats/books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/stats/books?periode=30j",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats/users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/stats/users?periode=30j",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats/search-terms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/stats/search-terms?periode=30j",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) throw new Error('Lancez 00 → Login admin');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/webhooks/pawapay/deposits (ping local)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/webhooks/pawapay/deposits",
+            "description": "Ping sans ngrok (localhost). Pour PawaPay réel, utiliser publicBaseUrl dans dossier 06.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{admin_access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "10 — Parcours E2E PawaPay",
+      "description": "Collection Runner : delay **5000 ms** entre étapes 4→6 (attente callback). `.env` = pawapay + ngrok.",
+      "item": [
+        {
+          "name": "1. Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/password/login",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status OK', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.access_token) pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "  if (j.refresh_token) pm.collectionVariables.set('refresh_token', j.refresh_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. GET /plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/plans",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "const p = j.data?.[0] || j;",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Ping webhook ngrok",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}{{publicBaseUrl}}/api/webhooks/pawapay/deposits",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. POST /payments/init (PawaPay)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/init",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber}}\",\n  \"operator\": \"{{provider}}\",\n  \"country\": \"CG\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.ref_transaction) pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "if (j.pawapay?.deposit_id) pm.collectionVariables.set('deposit_id', j.pawapay.deposit_id);",
+                  "console.log('PawaPay init — ref:', j.ref_transaction, '| deposit:', j.pawapay?.deposit_id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. GET /payments/status — relancer si EN_ATTENTE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/status?transaction_id={{ref_transaction}}",
+            "description": "Attendre 20 s après étape 5. Relancer jusqu’à statut SUCCES.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "7. GET /subscriptions/current",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/subscriptions/current",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. GET /books → book_id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books?limit=1",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('book_id', j.data[0].id);",
+                  "pm.test('book_id', () => pm.expect(pm.collectionVariables.get('book_id')).to.be.a('string').and.not.empty);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "9. POST /books/:id/access",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('lecture_token', j.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. GET /books/:id/stream validate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}&validate=true",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. GET /me/dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/dashboard",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 — Paiements mock (optionnel, sans PawaPay)",
+      "description": "Uniquement si `.env` → `PAYMENT_PROVIDER=mock`. Pas d’intégration réelle — debug local sans ngrok.",
+      "item": [
+        {
+          "name": "POST /payments/init (mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/init",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "const j = pm.response.json();",
+                  "if (j.ref_transaction) pm.collectionVariables.set('ref_transaction', j.ref_transaction);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /payments/mock/simulate SUCCESS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/mock/simulate",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"{{ref_transaction}}\",\n  \"outcome\": \"success\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/status?transaction_id={{ref_transaction}}",
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) throw new Error('Lancez 00 → Login utilisateur');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

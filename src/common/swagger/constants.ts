@@ -1,0 +1,29 @@
+/** Nom du schéma de sécurité Bearer JWT dans OpenAPI. */
+export const SWAGGER_BEARER_AUTH = 'access-token';
+
+export const SWAGGER_TAGS = {
+  APP: 'Application',
+  AUTH: 'Authentification',
+  PROFILE: 'Profil utilisateur (/me)',
+  LIBRARIES: 'Bibliothèques',
+  BOOKS: 'Livres & lecture',
+  PLANS: 'Plans d’abonnement',
+  SUBSCRIPTIONS: 'Abonnements',
+  PAYMENTS: 'Paiements',
+  CHALLENGES: 'Défis & challenges',
+  BADGES: 'Badges',
+  GAMIFICATION: 'Gamification',
+  RECOMMENDATIONS: 'Recommandations',
+  SEARCH: 'Recherche',
+  NOTIFICATIONS: 'Notifications',
+  ADMIN_USERS: 'Admin — Utilisateurs',
+  ADMIN_BOOKS: 'Admin — Livres',
+  ADMIN_LIBRARIES: 'Admin — Bibliothèques',
+  ADMIN_AUTEURS: 'Admin — Auteurs',
+  ADMIN_CATEGORIES: 'Admin — Catégories',
+  ADMIN_PLANS: 'Admin — Plans',
+  ADMIN_CHALLENGES: 'Admin — Défis',
+  ADMIN_BADGES: 'Admin — Badges',
+  ADMIN_MODERATION: 'Admin — Modération & abonnements',
+  ADMIN_STATS: 'Admin — Statistiques',
+} as const;

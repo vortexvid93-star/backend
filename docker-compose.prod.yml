@@ -1,0 +1,46 @@
+# Production — application NestJS uniquement (PostgreSQL externe : Railway, Supabase, etc.)
+# Usage :
+#   export DATABASE_URL="postgresql://..."
+#   export JWT_SECRET="..."
+#   # … autres variables requises
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Les variables sont lues depuis l'environnement du serveur (pas de fichier .env monté).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: bibliotech-backend:latest
+    container_name: bibliotech-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL requis}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis}
+      OTP_HMAC_SECRET: ${OTP_HMAC_SECRET:?OTP_HMAC_SECRET requis}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      CRON_ENABLED: ${CRON_ENABLED:-true}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-pawapay}
+      PAYMENT_PUBLIC_BASE_URL: ${PAYMENT_PUBLIC_BASE_URL:-}
+      PAWAPAY_MODE: ${PAWAPAY_MODE:-sandbox}
+      PAWAPAY_API_URL: ${PAWAPAY_API_URL:-}
+      PAWAPAY_API_TOKEN: ${PAWAPAY_API_TOKEN:-}
+      PAWAPAY_PUBLIC_BASE_URL: ${PAWAPAY_PUBLIC_BASE_URL:-}
+      PAWAPAY_DEFAULT_PROVIDER: ${PAWAPAY_DEFAULT_PROVIDER:-MTN_MOMO_COG}
+      PAWAPAY_DEFAULT_CURRENCY: ${PAWAPAY_DEFAULT_CURRENCY:-XAF}
+      TOKEN_LECTURE_RETENTION_DAYS: ${TOKEN_LECTURE_RETENTION_DAYS:-7}

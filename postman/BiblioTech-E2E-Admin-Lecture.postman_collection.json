@@ -1,0 +1,480 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-e2e-admin-lecture-v1",
+    "name": "BiblioTech — E2E Admin → Lecture / Téléchargement",
+    "description": "Parcours complet de bout en bout :\n\n1. **Admin** — login + création livre INTERNE (fichier → Cloudinary)\n2. **Utilisateur** — login + abonnement (mock) si besoin\n3. **Lecture** — access → stream → URL Cloudinary signée\n4. **Téléchargement** — access TELECHARGEMENT → stream avec `fl_attachment`\n\n**Prérequis `.env`**\n- `npm run start:dev`\n- `CLOUDINARY_URL` configuré\n- `PAYMENT_PROVIDER=mock`\n- Compte **ADMIN** : `UPDATE auth SET role='ADMIN', statut='ACTIF', email_verified=true WHERE email='admin@biblio.tech';`\n- Compte **USER** : `reader@biblio.tech` / `MonMotDePasse123` (inscription Auth ou variables ci-dessous)\n\n**Fichier livre** : dans **2.1**, sélectionnez un PDF/EPUB/MOBI sur le champ `file`.\n\n**Ordre** : exécuter les dossiers **1 → 2 → 3 → 4** dans l'ordre.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "admin@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "admin_access_token", "value": "" },
+    { "key": "user_email", "value": "reader@biblio.tech" },
+    { "key": "user_password", "value": "MonMotDePasse123" },
+    { "key": "user_access_token", "value": "" },
+    { "key": "plan_id", "value": "" },
+    { "key": "ref_transaction", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "lecture_token", "value": "" },
+    { "key": "download_token", "value": "" },
+    { "key": "cloudinary_url", "value": "" },
+    { "key": "e2e_isbn", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 — Santé API",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('API + DB OK', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.database).to.eql('up');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Admin : créer le livre (Cloudinary)",
+      "description": "JWT `admin_access_token`. Le livre est créé avec `is_downloadable=true` pour tester le téléchargement ensuite.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "1.1 Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login admin 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('admin_access_token', j.access_token.trim());",
+                  "pm.test('Role ADMIN', () => pm.expect(j.user.role).to.eql('ADMIN'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "1.2 POST /admin/books — INTERNE + fichier ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) {",
+                  "  throw new Error('Lancez 1.1 Login admin.');",
+                  "}",
+                  "pm.collectionVariables.set('e2e_isbn', '978-E2E-' + Date.now());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Livre créé 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('book_id', j.id);",
+                  "console.log('book_id:', j.id, '| titre:', j.titre);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Sélectionnez un PDF (ou EPUB/MOBI)"
+                },
+                { "key": "titre", "value": "E2E Livre Cloudinary", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" },
+                { "key": "is_downloadable", "value": "true", "type": "text" },
+                { "key": "isbn", "value": "{{e2e_isbn}}", "type": "text" },
+                {
+                  "key": "resume",
+                  "value": "Livre créé par le parcours E2E Postman.",
+                  "type": "text"
+                },
+                { "key": "langue", "value": "Français", "type": "text" },
+                { "key": "nombre_pages", "value": "50", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "1.3 GET /admin/books?q=E2E (vérif liste)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/books?q=E2E&limit=5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Utilisateur : compte + abonnement",
+      "description": "Si `reader@biblio.tech` n'existe pas : Auth collection → Register + OTP, puis revenir ici.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "2.1 Login utilisateur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('user_access_token', pm.response.json().access_token.trim());",
+                  "} else {",
+                  "  console.warn('Créez le compte via BiblioTech-Auth (register/password + OTP)');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "2.2 GET /me — abonnement actif ?",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('user_access_token')) throw new Error('2.1 Login requis');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.abonnement_actif) {",
+                  "  console.log('✓ Abonnement actif — passez au dossier 3');",
+                  "} else {",
+                  "  console.warn('⚠ Pas d\\'abonnement — enchaînez 2.3 → 2.6');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        },
+        {
+          "name": "2.3 GET /plans → plan_id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const p = pm.response.json().data?.[0];",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/plans"
+          }
+        },
+        {
+          "name": "2.4 POST /payments/init",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('ref_transaction', pm.response.json().ref_transaction);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": \"{{plan_id}}\"\n}" },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "2.5 POST /payments/mock/simulate (success)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"{{ref_transaction}}\",\n  \"outcome\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/mock/simulate"
+          }
+        },
+        {
+          "name": "2.6 GET /subscriptions/current",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Abonnement actif', () => {",
+                  "  pm.expect(pm.response.json().abonnement).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/subscriptions/current" }
+        }
+      ]
+    },
+    {
+      "name": "3 — Utilisateur : lecture (Cloudinary)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "3.1 GET /books/:id — fiche livre E2E",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('book_id')) throw new Error('Dossier 1.2 requis');",
+                  "if (!pm.collectionVariables.get('user_access_token')) throw new Error('Dossier 2 requis');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}" }
+        },
+        {
+          "name": "3.2 GET /books/:id/access/check?type=LECTURE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('eligible', () => pm.expect(j.eligible).to.be.true);",
+                  "pm.test('CLOUDINARY', () => pm.expect(j.acces_type).to.eql('CLOUDINARY'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=LECTURE"
+          }
+        },
+        {
+          "name": "3.3 GET /books/:id/access?type=LECTURE → token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('lecture_token', j.token);",
+                  "pm.test('progression créée', () => pm.expect(j.progression_creee).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE"
+          }
+        },
+        {
+          "name": "3.4 GET /stream?validate=true → URL Cloudinary ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j.valid).to.be.true;",
+                  "pm.expect(j.redirect_url).to.include('res.cloudinary.com');",
+                  "pm.collectionVariables.set('cloudinary_url', j.redirect_url);",
+                  "console.log('Ouvrez cloudinary_url dans le navigateur pour lire le PDF');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}&validate=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [
+                { "key": "token", "value": "{{lecture_token}}" },
+                { "key": "validate", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3.5 GET /stream (302 → Cloudinary)",
+          "request": {
+            "method": "GET",
+            "description": "Postman : Settings → désactiver « Automatically follow redirects » pour voir le 302 Location.",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [{ "key": "token", "value": "{{lecture_token}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — Utilisateur : téléchargement",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "4.1 GET /access/check?type=TELECHARGEMENT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.test('peut télécharger', () => pm.expect(j.peut_telecharger).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=TELECHARGEMENT"
+          }
+        },
+        {
+          "name": "4.2 GET /access?type=TELECHARGEMENT → token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('download_token', pm.response.json().token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=TELECHARGEMENT"
+          }
+        },
+        {
+          "name": "4.3 GET /stream?validate=true (attachment) ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const url = pm.response.json().redirect_url;",
+                  "pm.expect(url).to.include('res.cloudinary.com');",
+                  "const hasAttachment = url.includes('fl_attachment') || url.includes('attachment');",
+                  "pm.test('mode téléchargement', () => pm.expect(hasAttachment).to.be.true);",
+                  "console.log('URL téléchargement:', url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{download_token}}&validate=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [
+                { "key": "token", "value": "{{download_token}}" },
+                { "key": "validate", "value": "true" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

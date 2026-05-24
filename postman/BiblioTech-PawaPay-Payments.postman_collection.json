@@ -1,0 +1,292 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-pawapay-v1",
+    "name": "BiblioTech — Paiements PawaPay (sandbox)",
+    "description": "Tests d'abonnement via **PawaPay API v2** (dépôts Mobile Money).\n\n## Prérequis `.env`\n```\nPAYMENT_PROVIDER=pawapay\nPAWAPAY_API_URL=https://api.sandbox.pawapay.io\nPAWAPAY_API_TOKEN=<token dashboard>\nPAWAPAY_PUBLIC_BASE_URL=https://VOTRE-ID.ngrok-free.app\nPAYMENT_PUBLIC_BASE_URL=https://VOTRE-ID.ngrok-free.app\nPAWAPAY_DEFAULT_PROVIDER=MTN_MOMO_COG\nPAWAPAY_DEFAULT_CURRENCY=XAF\nPORT=3000\n```\n\n## Dashboard PawaPay (Callback URLs)\n| Type | URL |\n|------|-----|\n| Deposits | `{{publicBaseUrl}}/api/webhooks/pawapay/deposits` |\n| Payouts | `{{publicBaseUrl}}/api/webhooks/pawapay/payouts` |\n| Refunds | `{{publicBaseUrl}}/api/webhooks/pawapay/refunds` |\n\n> Sandbox : pas de PIN sur le téléphone — le callback `COMPLETED` arrive automatiquement.\n\n## Ordre de test\n1. **0 — Auth** → Login\n2. **Ping** → GET `/api/webhooks/pawapay/deposits` (vérifie ngrok)\n3. **B — PawaPay** → POST `/payments/init` (réconciliation auto à 3/8/20 s)\n4. **C — Statut** → GET `/payments/status` → doit passer en SUCCES\n5. **D — Abonnement** → GET `/subscriptions/current`\n\n## Logs backend\nChercher : `Callback dépôt REÇU`, `handleWebhook ref=… → SUCCES`, `PawaPay init OK`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "publicBaseUrl", "value": "https://specks-contents-amazingly.ngrok-free.dev" },
+    { "key": "email", "value": "reader@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "plan_id", "value": "" },
+    { "key": "ref_transaction", "value": "" },
+    { "key": "phonenumber_mtn", "value": "242063456789" },
+    { "key": "phonenumber_airtel", "value": "242053456789" },
+    { "key": "phonenumber", "value": "242063456789" },
+    { "key": "provider", "value": "MTN_MOMO_COG" },
+    { "key": "deposit_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 — Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ping — Webhook reachable",
+      "item": [
+        {
+          "name": "GET /api/webhooks/pawapay/deposits (ping)",
+          "request": {
+            "method": "GET",
+            "url": "{{publicBaseUrl}}/api/webhooks/pawapay/deposits"
+          }
+        }
+      ]
+    },
+    {
+      "name": "A — Plans",
+      "item": [
+        {
+          "name": "GET /plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const p = pm.response.json().data?.[0];",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/plans" }
+        },
+        {
+          "name": "GET /payments/checkout-preview",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/checkout-preview?plan_id={{plan_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "checkout-preview"],
+              "query": [{ "key": "plan_id", "value": "{{plan_id}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "B — PawaPay init",
+      "item": [
+        {
+          "name": "POST /payments/init — MTN Congo (MTN_MOMO_COG)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber_mtn}}\",\n  \"operator\": \"MTN_MOMO_COG\",\n  \"country\": \"CG\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "POST /payments/init — Airtel Congo (AIRTEL_COG)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber_airtel}}\",\n  \"operator\": \"AIRTEL_COG\",\n  \"country\": \"CG\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "POST /payments/init — auto opérateur (sans operator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('ref_transaction', j.ref_transaction);",
+                  "  console.log('ref:', j.ref_transaction, '| return URL:', j.payment_url);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{plan_id}}\",\n  \"phonenumber\": \"{{phonenumber}}\",\n  \"country\": \"CG\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "GET /payments/pending",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/payments/pending"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C — Statut & retour",
+      "item": [
+        {
+          "name": "GET /payments/status (sync PawaPay API)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/status?transaction_id={{ref_transaction}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "status"],
+              "query": [{ "key": "transaction_id", "value": "{{ref_transaction}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /payments/return",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/return?transaction_id={{ref_transaction}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "D — Abonnement",
+      "item": [
+        {
+          "name": "GET /subscriptions/current",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/current"
+          }
+        }
+      ]
+    },
+    {
+      "name": "E — Webhooks (tests manuels)",
+      "item": [
+        {
+          "name": "POST callback dépôt COMPLETED (simulation)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"{{deposit_id}}\",\n  \"status\": \"COMPLETED\",\n  \"clientReferenceId\": \"{{ref_transaction}}\",\n  \"amount\": \"1000\",\n  \"currency\": \"XAF\",\n  \"country\": \"COG\",\n  \"payer\": {\n    \"type\": \"MMO\",\n    \"accountDetails\": {\n      \"phoneNumber\": \"{{phonenumber}}\",\n      \"provider\": \"{{provider}}\"\n    }\n  },\n  \"created\": \"2025-05-15T07:38:56Z\"\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/pawapay/deposits"
+          }
+        },
+        {
+          "name": "POST callback dépôt FAILED (simulation)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"{{deposit_id}}\",\n  \"status\": \"FAILED\",\n  \"clientReferenceId\": \"{{ref_transaction}}\",\n  \"failureReason\": {\n    \"failureCode\": \"PROVIDER_ERROR\",\n    \"failureMessage\": \"Test échec\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/pawapay/deposits"
+          }
+        },
+        {
+          "name": "POST callback payout (log only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payoutId\": \"00000000-0000-4000-8000-000000000001\",\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/pawapay/payouts"
+          }
+        },
+        {
+          "name": "POST callback refund (log only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refundId\": \"00000000-0000-4000-8000-000000000002\",\n  \"status\": \"COMPLETED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/pawapay/refunds"
+          }
+        }
+      ]
+    }
+  ]
+}

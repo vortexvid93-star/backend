@@ -1,0 +1,317 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-mod-stats-v1",
+    "name": "BiblioTech — Admin Modération & Stats (§13)",
+    "description": "Collection pour tester la section **13 — Admin — Modération, Abonnements & Statistiques**.\n\n**Prérequis**\n1. `npm run start:dev`\n2. Compte `role = ADMIN` et `statut = ACTIF`\n3. Lancer **0.1 Login admin** pour remplir `access_token`\n\n**Variables** : baseUrl, admin_email, admin_password, access_token, comment_id, subscription_id",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "admin@biblio.tech" },
+    { "key": "admin_password", "value": "AdminMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "comment_id", "value": "" },
+    { "key": "subscription_id", "value": "" },
+    { "key": "auth_id_filter", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "item": [
+        {
+          "name": "0.1 Login admin → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 Préparer IDs (commentaire + abonnement)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) {",
+                  "  throw new Error('Lancez 0.1 Login admin d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data[0]) {",
+                  "    pm.collectionVariables.set('comment_id', j.data[0].id);",
+                  "    if (j.data[0].auteur) console.log('comment auteur:', j.data[0].auteur.email);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/comments?limit=1"
+          }
+        },
+        {
+          "name": "0.3 Préparer subscription_id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  const actif = (j.data || []).find(s => s.statut === 'ACTIF');",
+                  "  const row = actif || (j.data && j.data[0]);",
+                  "  if (row) pm.collectionVariables.set('subscription_id', row.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/subscriptions?statut=ACTIF&limit=5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.1 — Liste commentaires",
+      "item": [
+        {
+          "name": "GET /admin/comments (tous)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/comments?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "comments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/comments?statut=PUBLIE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/comments?statut=PUBLIE&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "comments"],
+              "query": [
+                { "key": "statut", "value": "PUBLIE" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/comments?statut=MODERE",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/comments?statut=MODERE"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.2 — Modérer commentaire",
+      "item": [
+        {
+          "name": "PATCH /admin/comments/:id/moderate",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Contenu inapproprié signalé par les utilisateurs.\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/comments/{{comment_id}}/moderate"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.3 — Supprimer commentaire (hard delete)",
+      "item": [
+        {
+          "name": "DELETE /admin/comments/:id",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/comments/{{comment_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.4 — Liste abonnements",
+      "item": [
+        {
+          "name": "GET /admin/subscriptions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/subscriptions?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "subscriptions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/subscriptions?statut=ACTIF&plan=MENSUEL",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/subscriptions?statut=ACTIF&plan=MENSUEL"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.5 — Annuler abonnement",
+      "item": [
+        {
+          "name": "PATCH /admin/subscriptions/:id/cancel",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Annulation administrative suite à fraude signalée.\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/subscriptions/{{subscription_id}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.6 — Liste paiements",
+      "item": [
+        {
+          "name": "GET /admin/payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/payments?page=1&limit=20"
+          }
+        },
+        {
+          "name": "GET /admin/payments?statut=SUCCES",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/payments?statut=SUCCES&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.7 — Dashboard",
+      "item": [
+        {
+          "name": "GET /admin/stats/dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/dashboard"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.8 — Stats livres",
+      "item": [
+        {
+          "name": "GET /admin/stats/books",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/books?sort=nb_lectures&page=1&limit=10"
+          }
+        },
+        {
+          "name": "GET /admin/stats/books?sort=note_moyenne",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/books?sort=note_moyenne&limit=5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.9 — Stats utilisateurs",
+      "item": [
+        {
+          "name": "GET /admin/stats/users (30j défaut)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/users"
+          }
+        },
+        {
+          "name": "GET /admin/stats/users?periode=7j",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/users?periode=7j"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13.10 — Termes de recherche",
+      "item": [
+        {
+          "name": "GET /admin/stats/search-terms",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/search-terms?periode=30j"
+          }
+        },
+        {
+          "name": "GET /admin/stats/search-terms?no_results=true",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats/search-terms?periode=30j&no_results=true"
+          }
+        }
+      ]
+    }
+  ]
+}

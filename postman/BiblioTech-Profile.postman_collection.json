@@ -1,0 +1,422 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-profile-v2",
+    "name": "BiblioTech — Profil API (v2.4)",
+    "description": "Collection profil BiblioTech : identité, dashboard, bibliothèque, activité, onboarding, stats détaillées, social, photo Cloudinary.\n\n**Import** : `postman/BiblioTech-Profile.postman_collection.json`\n\n**Prérequis**\n1. `npm run start:dev` (+ `CLOUDINARY_URL` pour les photos)\n2. Compte test configuré dans les variables\n3. Lancer **0.1 Login** avant tout le reste\n\n**Variables** : baseUrl, email_password, password, access_token",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT)",
+      "description": "Exécutez 0.1 Login en premier pour remplir access_token automatiquement.",
+      "item": [
+        {
+          "name": "0.1 Login mot de passe → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  console.log('access_token enregistré');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 Vérifier JWT (GET /me)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) {",
+                  "  throw new Error('Lancez 0.1 Login d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('JWT valide', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        }
+      ]
+    },
+    {
+      "name": "P0 — Dashboard & bibliothèque",
+      "item": [
+        {
+          "name": "GET /me/dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Structure dashboard', () => {",
+                  "  pm.expect(j).to.have.keys('profil','stats','defis','nb_notifications_non_lues','badge_recent');",
+                  "  pm.expect(j.profil).to.have.keys('id','email','prenom','nom','points');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/dashboard" }
+        },
+        {
+          "name": "GET /me/reading (tous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j.data).to.be.an('array');",
+                  "pm.expect(j.meta).to.have.keys('page','limit','total','total_pages');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/reading?page=1&limit=20&sort=derniere_maj_desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "reading"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "sort", "value": "derniere_maj_desc", "description": "derniere_maj_desc | date_fin_desc | pourcentage_desc | date_debut_desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/reading?statut=EN_COURS",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/reading?statut=EN_COURS&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "reading"],
+              "query": [
+                { "key": "statut", "value": "EN_COURS" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/reading?statut=TERMINE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/reading?statut=TERMINE&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "reading"],
+              "query": [
+                { "key": "statut", "value": "TERMINE" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "P1 — Activité & onboarding",
+      "item": [
+        {
+          "name": "GET /me/activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j.data).to.be.an('array');",
+                  "if (j.data.length) pm.expect(j.data[0]).to.have.property('type');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/activity?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "activity"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "LIVRE_TERMINE", "disabled": true, "description": "LIVRE_TERMINE | BADGE_OBTENU | DEFI_COMPLETE | COMMENTAIRE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/activity?type=BADGE_OBTENU",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/activity?type=BADGE_OBTENU&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "activity"],
+              "query": [
+                { "key": "type", "value": "BADGE_OBTENU" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/completion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.keys('pourcentage','champs_manquants','champs_completes','total_champs');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/completion" }
+        },
+        {
+          "name": "GET /me/actions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j.data).to.be.an('array');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/actions" }
+        }
+      ]
+    },
+    {
+      "name": "2.1 — Mon profil complet",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        },
+        {
+          "name": "GET /me — sans JWT (401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2.2 — Modifier mon profil",
+      "item": [
+        {
+          "name": "PATCH /me — mise à jour partielle",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Dupont-MisAJour\",\n  \"prenom\": \"Jean\",\n  \"date_naissance\": \"1995-06-15\",\n  \"bio\": \"Passionné de lecture numérique.\",\n  \"genre\": \"M\",\n  \"ecole\": \"Université de Paris\",\n  \"niveau\": \"Licence 2\",\n  \"numero_telephone\": \"+33612345678\"\n}"
+            },
+            "url": "{{baseUrl}}/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2.2b — Photo Cloudinary",
+      "item": [
+        {
+          "name": "POST /me/photo — upload image",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "JPEG, PNG ou WebP — champ « file »"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/me/photo"
+          }
+        },
+        {
+          "name": "DELETE /me/photo — supprimer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 ou 400 si déjà sans photo', () => {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/me/photo" }
+        }
+      ]
+    },
+    {
+      "name": "2.3 — Mes badges",
+      "item": [
+        {
+          "name": "GET /me/badges/summary",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/badges/summary" }
+        },
+        {
+          "name": "GET /me/badges",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/badges" }
+        }
+      ]
+    },
+    {
+      "name": "2.4 — Mes défis",
+      "item": [
+        {
+          "name": "GET /me/challenges/summary",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/challenges/summary" }
+        },
+        {
+          "name": "GET /me/challenges",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/challenges?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "challenges"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "P2 — Stats détaillées & social",
+      "item": [
+        {
+          "name": "GET /me/stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/stats" }
+        },
+        {
+          "name": "GET /me/stats/reading",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.keys('livres_termines_par_mois','top_categories','serie_lecture_jours','resume');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/stats/reading" }
+        },
+        {
+          "name": "GET /me/stats/social",
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/stats/social" }
+        },
+        {
+          "name": "GET /me/comments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/comments?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "comments"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/ratings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/ratings?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "ratings"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

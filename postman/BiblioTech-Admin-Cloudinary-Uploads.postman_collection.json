@@ -1,0 +1,344 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-cloudinary-uploads",
+    "name": "BiblioTech — Test uploads Cloudinary (badges + couvertures)",
+    "description": "Collection dédiée aux **derniers ajustements** :\n\n1. **Login admin** → remplit `access_token`\n2. **Badges** : `icone` = fichier (PNG/JPEG/WebP/SVG) → URL Cloudinary\n3. **Livres** : `couverture` = fichier image → `couverture_url` Cloudinary\n\n**Prérequis**\n- `npm run start:dev`\n- `CLOUDINARY_URL` dans `.env`\n- Compte ADMIN (`password@biblio.tech` après seed, ou le vôtre)\n- Fichiers locaux à sélectionner dans Postman (voir descriptions)\n\n**Ordre** : exécuter **1 → 2 → 3 → 4 → 5 → 6** dans l’ordre.\n\n**Important Postman**\n- Body → **form-data** (pas raw JSON pour les uploads)\n- Ne pas ajouter d’en-tête `Content-Type` manuel sur les requêtes multipart\n- Clés fichier : type **File** et choisir un fichier sur le disque",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "badge_id", "value": "" },
+    { "key": "book_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const name = pm.info.requestName || '';",
+          "const url = pm.request.url ? pm.request.url.toString() : '';",
+          "if (name.includes('Login') || url.includes('/auth/password/login')) return;",
+          "if (!pm.collectionVariables.get('access_token')) {",
+          "  throw new Error('Lancez d\\'abord la requête « 1. Login admin (JWT) » (dossier 1 — Auth).');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1 — Auth",
+      "item": [
+        {
+          "name": "1. Login admin (JWT) ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('access_token présent', () => pm.expect(j.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('access_token', j.access_token.trim());",
+                  "if (j.user) console.log('role:', j.user.role, '| statut:', j.user.statut);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Badges (icone → fichier)",
+      "item": [
+        {
+          "name": "2. POST /admin/badges + icone (fichier) ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('icone = URL Cloudinary', () => {",
+                  "  pm.expect(j.icone).to.match(/^https:\\/\\/res\\.cloudinary\\.com\\//);",
+                  "});",
+                  "pm.collectionVariables.set('badge_id', j.id);",
+                  "console.log('icone:', j.icone);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "icone",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ OBLIGATOIRE — PNG, JPEG, WebP ou SVG (max 5 Mo)"
+                },
+                {
+                  "key": "nom",
+                  "value": "Test-Cloudinary-{{$timestamp}}",
+                  "type": "text"
+                },
+                { "key": "couleur", "value": "#FFD700", "type": "text" },
+                { "key": "points", "value": "30", "type": "text" },
+                {
+                  "key": "description",
+                  "value": "Badge créé via upload icone Cloudinary",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/badges"
+          }
+        },
+        {
+          "name": "2b. GET /admin/badges (vérifier icone URL)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const id = pm.collectionVariables.get('badge_id');",
+                  "const row = pm.response.json().data?.find(b => b.id === id);",
+                  "if (row) pm.test('liste contient icone cloudinary', () => {",
+                  "  pm.expect(row.icone).to.include('res.cloudinary.com');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/badges?limit=5" }
+        },
+        {
+          "name": "2c. PATCH /admin/badges/:id — nouvelle icone ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('badge_id')) {",
+                  "  throw new Error('Exécutez 2. POST badges d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.json().icone) {",
+                  "  pm.test('nouvelle icone cloudinary', () => {",
+                  "    pm.expect(pm.response.json().icone).to.include('res.cloudinary.com');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "icone",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Nouvelle image (remplace l'ancienne sur Cloudinary)"
+                },
+                { "key": "points", "value": "35", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/badges/{{badge_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — Livres (couverture → fichier)",
+      "item": [
+        {
+          "name": "3. POST /admin/books — INTERNE + file + couverture ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('book_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ OBLIGATOIRE (INTERNE) — PDF, EPUB ou MOBI"
+                },
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Image couverture — PNG/JPEG/WebP/SVG"
+                },
+                {
+                  "key": "titre",
+                  "value": "Test upload couverture Cloudinary",
+                  "type": "text"
+                },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" },
+                { "key": "is_downloadable", "value": "true", "type": "text" },
+                { "key": "langue", "value": "Français", "type": "text" },
+                { "key": "nombre_pages", "value": "100", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "3b. GET /admin/books (vérifier couverture_url)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const id = pm.collectionVariables.get('book_id');",
+                  "const row = pm.response.json().data?.find(b => b.id === id);",
+                  "if (row?.couverture_url) {",
+                  "  pm.test('couverture_url cloudinary', () => {",
+                  "    pm.expect(row.couverture_url).to.include('res.cloudinary.com');",
+                  "  });",
+                  "  console.log('couverture_url:', row.couverture_url);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?limit=10" }
+        },
+        {
+          "name": "3c. PATCH /admin/books/:id — nouvelle couverture ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('book_id')) {",
+                  "  throw new Error('Exécutez 3. POST books d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.json().couverture_url) {",
+                  "  pm.test('couverture cloudinary', () => {",
+                  "    pm.expect(pm.response.json().couverture_url).to.include('res.cloudinary.com');",
+                  "  });",
+                  "  console.log('couverture_url:', pm.response.json().couverture_url);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Nouvelle image de couverture"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "3d. POST /admin/books — EXTERNE + couverture seule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('201', () => pm.response.to.have.status(201));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "Couverture optionnelle (pas de file livre)"
+                },
+                { "key": "titre", "value": "Livre EXTERNE couverture test", "type": "text" },
+                { "key": "type_livre", "value": "EXTERNE", "type": "text" },
+                {
+                  "key": "url_externe_livre",
+                  "value": "https://example.com/livre-externe-test",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        }
+      ]
+    }
+  ]
+}

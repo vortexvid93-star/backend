@@ -1,0 +1,386 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-users-v1",
+    "name": "BiblioTech — Admin Utilisateurs",
+    "description": "Collection pour tester la section **8 — Admin — Utilisateurs**.\n\n**Prérequis**\n1. `npm run start:dev`\n2. Un compte avec `role = ADMIN` et `statut = ACTIF` (voir note dossier 0)\n3. Lancer **0.1 Login admin** pour remplir `access_token`\n\n**Variables** : baseUrl, admin_email, admin_password, access_token, target_user_id",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "admin@biblio.tech" },
+    { "key": "admin_password", "value": "AdminMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "target_user_id", "value": "" },
+    { "key": "new_admin_email", "value": "admin2@biblio.tech" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "description": "Le premier compte ADMIN doit être promu en base (le seed ne crée pas d’auth). Exemple SQL :\n\n`UPDATE auth SET role = 'ADMIN', statut = 'ACTIF', email_verified = true WHERE email = 'password@biblio.tech';`\n\nOu créez un admin via un compte déjà ADMIN avec **5.1 POST /admin/users**.",
+      "item": [
+        {
+          "name": "0.1 Login admin → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.user) console.log('role:', json.user.role, 'statut:', json.user.statut);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 Vérifier accès admin (GET /admin/users)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('access_token')) {",
+                  "  throw new Error('Lancez 0.1 Login admin d\\'abord.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 (ADMIN)', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.data && j.data.length > 0) {",
+                  "    const user = j.data.find(u => u.role === 'USER') || j.data[0];",
+                  "    pm.collectionVariables.set('target_user_id', user.id);",
+                  "    console.log('target_user_id:', user.id, user.email);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [{ "key": "limit", "value": "5" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8.1 — Liste utilisateurs",
+      "item": [
+        {
+          "name": "GET /admin/users (tous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Pagination', () => {",
+                  "  pm.expect(j).to.have.keys('data','meta');",
+                  "  pm.expect(j.meta).to.have.keys('page','limit','total','total_pages');",
+                  "});",
+                  "if (j.data && j.data[0]) {",
+                  "  pm.expect(j.data[0]).to.have.keys('id','email','role','statut','personne');",
+                  "  pm.expect(j.data[0]).to.not.have.property('mot_de_passe_hash');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/users?statut=ACTIF&role=USER",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?statut=ACTIF&role=USER&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "statut", "value": "ACTIF" },
+                { "key": "role", "value": "USER" },
+                { "key": "q", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/users?q=password",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?q=password",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [{ "key": "q", "value": "password" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8.2 — Détail utilisateur",
+      "item": [
+        {
+          "name": "GET /admin/users/:id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('target_user_id')) {",
+                  "  throw new Error('Lancez 0.2 pour définir target_user_id, ou collez un UUID.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('Structure détail', () => {",
+                  "  pm.expect(j).to.have.keys('auth','personne','abonnements','paiements','nb_commentaires','nb_notes','nb_defis_completes');",
+                  "  pm.expect(j.auth).to.have.keys('id','email','role','statut');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users/{{target_user_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8.3 — Bannir",
+      "item": [
+        {
+          "name": "PATCH /admin/users/:id/ban",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('BANNI', () => pm.expect(j.statut).to.eql('BANNI'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"Test Postman — compte de démonstration\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users/{{target_user_id}}/ban"
+          }
+        },
+        {
+          "name": "PATCH /admin/users/:id/ban (auto-bannissement → 400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const token = pm.collectionVariables.get('access_token');",
+                  "if (!token) throw new Error('JWT requis');",
+                  "const payload = JSON.parse(atob(token.split('.')[1]));",
+                  "pm.variables.set('self_auth_id', payload.sub);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/admin/users/{{self_auth_id}}/ban"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8.4 — Débannir",
+      "item": [
+        {
+          "name": "PATCH /admin/users/:id/unban",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().statut).to.eql('ACTIF');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/users/{{target_user_id}}/unban"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8.5 — Créer un admin",
+      "item": [
+        {
+          "name": "POST /admin/users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('Compte ADMIN ACTIF', () => {",
+                  "  pm.expect(j.role).to.eql('ADMIN');",
+                  "  pm.expect(j.statut).to.eql('ACTIF');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Admin\",\n  \"prenom\": \"Second\",\n  \"email\": \"{{new_admin_email}}\",\n  \"password\": \"AdminMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users"
+          }
+        },
+        {
+          "name": "POST /admin/users (email dupliqué → 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 409', () => pm.response.to.have.status(409));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Dup\",\n  \"prenom\": \"Test\",\n  \"email\": \"{{new_admin_email}}\",\n  \"password\": \"AdminMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/users"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Erreurs (non-ADMIN → 403)",
+      "item": [
+        {
+          "name": "GET /admin/users sans rôle ADMIN",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.collectionVariables.get('baseUrl') + '/auth/password/login',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: {",
+                  "    mode: 'raw',",
+                  "    raw: JSON.stringify({",
+                  "      email: 'password@biblio.tech',",
+                  "      password: 'MonMotDePasse123'",
+                  "    })",
+                  "  }",
+                  "}, (err, res) => {",
+                  "  if (err) throw err;",
+                  "  const json = res.json();",
+                  "  pm.variables.set('user_token', json.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{user_token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/users"
+          }
+        }
+      ]
+    }
+  ]
+}

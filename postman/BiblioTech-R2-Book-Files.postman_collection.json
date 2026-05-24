@@ -1,0 +1,708 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-r2-book-files-v1",
+    "name": "BiblioTech — Fichiers livres R2 (PDF/EPUB/MOBI)",
+    "description": "Collection dédiée au test de la migration **fichiers livres INTERNE → Cloudflare R2**.\n\n**Ce qui est testé**\n- Upload admin `file` → R2 (clé `bibliotech/livres/{uuid}.pdf` en DB)\n- Couverture `couverture` → Cloudinary (inchangé)\n- Lecture / téléchargement → URL présignée R2 (`X-Amz-*`)\n- Remplacement fichier (PATCH)\n\n**Prérequis `.env`**\n```\nnpm run start:dev\nCLOUDINARY_URL=...\nR2_ACCOUNT_ID=...\nR2_ACCESS_KEY_ID=...\nR2_SECRET_ACCESS_KEY=...\nR2_BUCKET_NAME=bi-links-documents\nR2_ENDPOINT=https://<account>.r2.cloudflarestorage.com\nPAYMENT_PROVIDER=mock\n```\n\n**Comptes**\n- Admin : `admin@biblio.tech` / `MonMotDePasse123` (role ADMIN en SQL)\n- Lecteur : `reader@biblio.tech` / `MonMotDePasse123`\n\n**Fichier livre** : dans **1.2** et **1.5**, sélectionnez un **PDF** (ou EPUB/MOBI) sur le champ `file`.\n\n**Ordre** : dossiers **0 → 1 → 2 → 3 → 4** (Run folder).\n\n**Astuce Postman** : Settings → désactiver « Automatically follow redirects » pour voir le **302** sur les requêtes stream sans `validate=true`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "admin@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "admin_access_token", "value": "" },
+    { "key": "user_email", "value": "reader@biblio.tech" },
+    { "key": "user_password", "value": "MonMotDePasse123" },
+    { "key": "user_access_token", "value": "" },
+    { "key": "plan_id", "value": "" },
+    { "key": "ref_transaction", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "e2e_isbn", "value": "" },
+    { "key": "lecture_token", "value": "" },
+    { "key": "download_token", "value": "" },
+    { "key": "r2_signed_url", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 — Prérequis",
+      "description": "Vérifier que l'API tourne avant le parcours R2.",
+      "item": [
+        {
+          "name": "0.1 GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('API + DB OK (200)', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().database).to.eql('up');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Admin : upload R2",
+      "description": "JWT admin. **1.2** : choisir un PDF sur `file`. La couverture (1.6) reste sur Cloudinary.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{admin_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "1.1 Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login admin 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('admin_access_token', j.access_token.trim());",
+                  "pm.test('Role ADMIN', () => pm.expect(j.user.role).to.eql('ADMIN'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "1.2 POST /admin/books — INTERNE + file → R2 ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('admin_access_token')) {",
+                  "  throw new Error('Exécutez 1.1 Login admin.');",
+                  "}",
+                  "pm.collectionVariables.set('e2e_isbn', '978-R2-' + Date.now());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Livre créé 201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.test('INTERNE + PUBLIE', () => {",
+                  "  pm.expect(j.type_livre).to.eql('INTERNE');",
+                  "  pm.expect(j.statut).to.eql('PUBLIE');",
+                  "});",
+                  "pm.collectionVariables.set('book_id', j.id);",
+                  "console.log('book_id:', j.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Obligatoire : PDF, EPUB ou MOBI (max 50 Mo) → stocké sur R2"
+                },
+                { "key": "titre", "value": "E2E Livre R2 Postman", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" },
+                { "key": "is_downloadable", "value": "true", "type": "text" },
+                { "key": "isbn", "value": "{{e2e_isbn}}", "type": "text" },
+                {
+                  "key": "resume",
+                  "value": "Livre test migration Cloudflare R2.",
+                  "type": "text"
+                },
+                { "key": "langue", "value": "Français", "type": "text" },
+                { "key": "nombre_pages", "value": "42", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books",
+            "description": "Ne pas ajouter Content-Type manuellement. Le fichier part en multipart vers R2."
+          }
+        },
+        {
+          "name": "1.3 GET /admin/books?q=E2E (vérif liste)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('pagination', () => pm.expect(j).to.have.keys('data','meta'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/books?q=E2E&limit=5"
+          }
+        },
+        {
+          "name": "1.4 POST /admin/books — INTERNE sans file (→ 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 fichier requis', () => pm.response.to.have.status(400));",
+                  "pm.expect(pm.response.json().message).to.be.a('string');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Sans fichier R2", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "1.5 PATCH /admin/books/:id — remplacer fichier R2 ★",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('book_id')) throw new Error('1.2 requis');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 remplacement OK', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('updatedAt');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "★ Nouveau PDF/EPUB/MOBI — remplace l'objet R2 précédent"
+                },
+                { "key": "titre", "value": "E2E Livre R2 (fichier remplacé)", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "1.6 PATCH /admin/books/:id — couverture Cloudinary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 + couverture_url', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const j = pm.response.json();",
+                  "  if (j.couverture_url) {",
+                  "    pm.expect(j.couverture_url).to.include('res.cloudinary.com');",
+                  "    console.log('Couverture Cloudinary OK');",
+                  "  } else {",
+                  "    console.warn('Sélectionnez une image sur couverture pour tester Cloudinary');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "couverture",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optionnel : PNG/JPEG/WebP — reste sur Cloudinary"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Utilisateur : abonnement",
+      "description": "Si le lecteur n'a pas d'abonnement actif, enchaînez 2.3 → 2.6.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "2.1 Login utilisateur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('user_access_token', pm.response.json().access_token.trim());",
+                  "} else {",
+                  "  console.warn('Créez reader@biblio.tech via BiblioTech-Auth');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "2.2 GET /me — abonnement actif ?",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('user_access_token')) throw new Error('2.1 requis');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.abonnement_actif) {",
+                  "  console.log('✓ Abonnement actif');",
+                  "} else {",
+                  "  console.warn('⚠ Enchaînez 2.3 → 2.6');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        },
+        {
+          "name": "2.3 GET /plans → plan_id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const p = pm.response.json().data?.[0];",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/plans"
+          }
+        },
+        {
+          "name": "2.4 POST /payments/init",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('ref_transaction', pm.response.json().ref_transaction);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": \"{{plan_id}}\"\n}" },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "2.5 POST /payments/mock/simulate (success)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"{{ref_transaction}}\",\n  \"outcome\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/mock/simulate"
+          }
+        },
+        {
+          "name": "2.6 GET /subscriptions/current",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Abonnement actif', () => {",
+                  "  pm.expect(pm.response.json().abonnement).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/subscriptions/current" }
+        }
+      ]
+    },
+    {
+      "name": "3 — Lecture (URL présignée R2)",
+      "description": "Vérifie access + stream. L'URL signée doit contenir `r2.cloudflarestorage.com` et `X-Amz-`.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "3.1 GET /books/:id — fiche livre",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('book_id')) throw new Error('Dossier 1.2 requis');",
+                  "if (!pm.collectionVariables.get('user_access_token')) throw new Error('Dossier 2 requis');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json()).to.have.property('acces');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}" }
+        },
+        {
+          "name": "3.2 GET /books/:id/resource",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('ressource disponible', () => pm.expect(j.ressource_disponible).to.be.true);",
+                  "pm.test('acces_type CLOUDINARY (API legacy)', () => pm.expect(j.acces_type).to.eql('CLOUDINARY'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}/resource" }
+        },
+        {
+          "name": "3.3 GET /books/:id/access/check?type=LECTURE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('eligible lecture', () => pm.expect(j.eligible).to.be.true);",
+                  "pm.test('peut_lire', () => pm.expect(j.peut_lire).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=LECTURE"
+          }
+        },
+        {
+          "name": "3.4 GET /books/:id/access?type=LECTURE → token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('lecture_token', j.token);",
+                  "pm.test('stream_url présent', () => pm.expect(j.stream_url).to.include('/stream?token='));",
+                  "pm.test('progression créée', () => pm.expect(j.progression_creee).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE"
+          }
+        },
+        {
+          "name": "3.5 GET /stream?validate=true → URL R2 ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "function isR2PresignedUrl(url) {",
+                  "  return url.includes('r2.cloudflarestorage.com') && url.includes('X-Amz-');",
+                  "}",
+                  "pm.test('200 JSON validate', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('valid true', () => pm.expect(j.valid).to.be.true);",
+                  "pm.test('URL présignée R2 (pas Cloudinary)', () => {",
+                  "  pm.expect(isR2PresignedUrl(j.redirect_url)).to.be.true;",
+                  "  pm.expect(j.redirect_url).to.not.include('res.cloudinary.com');",
+                  "});",
+                  "pm.collectionVariables.set('r2_signed_url', j.redirect_url);",
+                  "console.log('Ouvrez r2_signed_url dans le navigateur pour lire le PDF');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}&validate=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [
+                { "key": "token", "value": "{{lecture_token}}" },
+                { "key": "validate", "value": "true" }
+              ]
+            },
+            "description": "Ne consomme pas le token (validate=true). Copiez redirect_url dans un navigateur."
+          }
+        },
+        {
+          "name": "3.6 GET /stream (302 → R2) ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const follow = pm.request.headers.get('X-Postman-Follow-Redirects');",
+                  "if (pm.response.code === 200 && pm.response.json().redirect_url) {",
+                  "  console.warn('Redirects actifs : désactivez-les pour voir le 302');",
+                  "}",
+                  "pm.test('302 Found ou redirection suivie', () => {",
+                  "  pm.expect([302, 200]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 302) {",
+                  "  const loc = pm.response.headers.get('Location');",
+                  "  pm.test('Location = R2', () => {",
+                  "    pm.expect(loc).to.include('r2.cloudflarestorage.com');",
+                  "    pm.expect(loc).to.include('X-Amz-');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [{ "key": "token", "value": "{{lecture_token}}" }]
+            },
+            "description": "Postman → Settings → General → désactiver « Automatically follow redirects »."
+          }
+        },
+        {
+          "name": "3.7 GET /stream — token déjà utilisé (410)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('410 Gone (token consommé)', () => pm.response.to.have.status(410));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}",
+            "description": "Après 3.6, le même token ne doit plus fonctionner."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — Téléchargement (R2 attachment)",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "4.1 GET /access/check?type=TELECHARGEMENT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.test('peut télécharger', () => pm.expect(j.peut_telecharger).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=TELECHARGEMENT"
+          }
+        },
+        {
+          "name": "4.2 GET /access?type=TELECHARGEMENT → token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('download_token', pm.response.json().token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=TELECHARGEMENT"
+          }
+        },
+        {
+          "name": "4.3 GET /stream?validate=true (attachment R2) ★",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const url = pm.response.json().redirect_url;",
+                  "pm.test('URL R2', () => {",
+                  "  pm.expect(url).to.include('r2.cloudflarestorage.com');",
+                  "  pm.expect(url).to.include('X-Amz-');",
+                  "});",
+                  "pm.test('mode attachment', () => {",
+                  "  pm.expect(url.toLowerCase()).to.include('attachment');",
+                  "});",
+                  "console.log('URL téléchargement:', url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{download_token}}&validate=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [
+                { "key": "token", "value": "{{download_token}}" },
+                { "key": "validate", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4.4 GET /books/:id/progress (date_telechargement)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.date_telechargement) {",
+                  "  console.log('✓ date_telechargement enregistrée');",
+                  "} else {",
+                  "  console.warn('Lancez 4.3 sans validate pour consommer le token téléchargement');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}/progress" }
+        }
+      ]
+    }
+  ]
+}

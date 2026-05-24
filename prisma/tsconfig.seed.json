@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "seed.ts",
+    "seed-challenges.ts",
+    "seed-catalog.ts",
+    "seed-user-data.ts"
+  ]
+}

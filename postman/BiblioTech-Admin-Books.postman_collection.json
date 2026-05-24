@@ -1,0 +1,304 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-admin-books-v1",
+    "name": "BiblioTech — Admin Livres",
+    "description": "Section **9 — Admin — Livres** : liste, CRUD, archivage, catégories et auteurs.\n\n**Prérequis** : compte ADMIN + `npm run db:seed` (catalogue).\n\nVariables : baseUrl, admin_email, admin_password, access_token, book_id, categorie_id, auteur_id",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "categorie_id", "value": "" },
+    { "key": "auteur_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "item": [
+        {
+          "name": "0.1 Login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 GET /admin/books → book_id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data[0]) {",
+                  "  pm.collectionVariables.set('book_id', j.data[0].id);",
+                  "  if (j.data[0].categories && j.data[0].categories[0]) {",
+                  "    pm.collectionVariables.set('categorie_id', j.data[0].categories[0].id);",
+                  "  }",
+                  "  if (j.data[0].auteurs && j.data[0].auteurs[0]) {",
+                  "    pm.collectionVariables.set('auteur_id', j.data[0].auteurs[0].id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?limit=3" }
+        }
+      ]
+    },
+    {
+      "name": "9.1 — Liste",
+      "item": [
+        {
+          "name": "GET /admin/books",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/books?page=1&limit=20" }
+        },
+        {
+          "name": "GET /admin/books?statut=PUBLIE&type_livre=INTERNE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/books?statut=PUBLIE&type_livre=INTERNE",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "books"],
+              "query": [
+                { "key": "statut", "value": "PUBLIE" },
+                { "key": "type_livre", "value": "INTERNE" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /admin/books?q=Petit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/books?q=Petit",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "books"],
+              "query": [{ "key": "q", "value": "Petit" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.2 — Créer",
+      "item": [
+        {
+          "name": "POST /admin/books (INTERNE + fichier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('book_id', j.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Sélectionnez un PDF/EPUB/MOBI"
+                },
+                { "key": "titre", "value": "Livre test admin INTERNE", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" },
+                { "key": "is_downloadable", "value": "true", "type": "text" },
+                { "key": "isbn", "value": "978-TEST-ADMIN-01", "type": "text" },
+                { "key": "resume", "value": "Créé via Postman + Cloudinary.", "type": "text" },
+                { "key": "langue", "value": "Français", "type": "text" },
+                { "key": "nombre_pages", "value": "120", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "POST /admin/books (EXTERNE, sans fichier)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Livre test admin EXTERNE", "type": "text" },
+                { "key": "type_livre", "value": "EXTERNE", "type": "text" },
+                {
+                  "key": "url_externe_livre",
+                  "value": "https://example.com/livres/admin-externe",
+                  "type": "text"
+                },
+                { "key": "isbn", "value": "978-TEST-ADMIN-02", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        },
+        {
+          "name": "POST /admin/books (INTERNE sans file → 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('400', () => pm.response.to.have.status(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titre", "value": "Invalide", "type": "text" },
+                { "key": "type_livre", "value": "INTERNE", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.3 — Modifier",
+      "item": [
+        {
+          "name": "PATCH /admin/books/:id (métadonnées)",
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "titre",
+                  "value": "Livre test admin INTERNE (modifié)",
+                  "type": "text"
+                },
+                {
+                  "key": "resume",
+                  "value": "Mise à jour via PATCH admin.",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "PATCH /admin/books/:id (remplacer fichier)",
+          "request": {
+            "method": "PATCH",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Nouveau PDF/EPUB/MOBI"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.4 — Archiver",
+      "item": [
+        {
+          "name": "PATCH /admin/books/:id/archive",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.expect(pm.response.json().statut).to.eql('ARCHIVE');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/archive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.5 — Catégories (REPLACE)",
+      "item": [
+        {
+          "name": "POST /admin/books/:id/categories",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categorie_ids\": [\"{{categorie_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9.6 — Auteurs (REPLACE)",
+      "item": [
+        {
+          "name": "POST /admin/books/:id/authors",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auteur_ids\": [\"{{auteur_id}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/admin/books/{{book_id}}/authors"
+          }
+        }
+      ]
+    }
+  ]
+}

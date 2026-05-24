@@ -1,0 +1,306 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-auth-v1",
+    "name": "BiblioTech — Auth API",
+    "description": "Collection pour tester les endpoints d'authentification BiblioTech v2.3.\n\nVariables de collection : baseUrl, email, access_token, refresh_token, otp_code.\nAprès login/verify, copiez les tokens dans les variables ou utilisez les scripts de test.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email", "value": "test@biblio.tech" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "otp_code", "value": "123456" }
+  ],
+  "item": [
+    {
+      "name": "A — Inscription OTP",
+      "item": [
+        {
+          "name": "1. Register (OTP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"nom\": \"Dupont\",\n  \"prenom\": \"Jean\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "2. OTP Request (login)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/otp/request"
+          }
+        },
+        {
+          "name": "3. OTP Verify → tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.refresh_token) {",
+                  "    const rt = json.refresh_token.trim();",
+                  "    pm.collectionVariables.set('refresh_token', rt);",
+                  "    console.log('refresh_token length:', rt.length, '(attendu ~165)');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"code\": \"{{otp_code}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/otp/verify"
+          }
+        }
+      ]
+    },
+    {
+      "name": "B — Inscription + mot de passe",
+      "item": [
+        {
+          "name": "4. Register with password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"nom\": \"Martin\",\n  \"prenom\": \"Sophie\",\n  \"password\": \"MonMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register/password"
+          }
+        },
+        {
+          "name": "5. OTP Verify (activer compte)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.refresh_token) {",
+                  "    const rt = json.refresh_token.trim();",
+                  "    pm.collectionVariables.set('refresh_token', rt);",
+                  "    console.log('refresh_token length:', rt.length, '(attendu ~165)');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"code\": \"{{otp_code}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/otp/verify"
+          }
+        },
+        {
+          "name": "6. Password login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.refresh_token) {",
+                  "    const rt = json.refresh_token.trim();",
+                  "    pm.collectionVariables.set('refresh_token', rt);",
+                  "    console.log('refresh_token length:', rt.length, '(attendu ~165)');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"MonMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C — Tokens & session",
+      "item": [
+        {
+          "name": "7. Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.refresh_token) {",
+                  "    const rt = json.refresh_token.trim();",
+                  "    pm.collectionVariables.set('refresh_token', rt);",
+                  "    console.log('refresh_token length:', rt.length, '(attendu ~165)');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/token/refresh"
+          }
+        },
+        {
+          "name": "8. Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "D — Reset mot de passe",
+      "item": [
+        {
+          "name": "9. Reset request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/reset/request"
+          }
+        },
+        {
+          "name": "10. Reset confirm",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"code\": \"{{otp_code}}\",\n  \"newPassword\": \"NouveauMotDePasse456\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/reset/confirm"
+          }
+        }
+      ]
+    },
+    {
+      "name": "E — Google OAuth (optionnel)",
+      "item": [
+        {
+          "name": "11. Google login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "  if (json.refresh_token) {",
+                  "    const rt = json.refresh_token.trim();",
+                  "    pm.collectionVariables.set('refresh_token', rt);",
+                  "    console.log('refresh_token length:', rt.length, '(attendu ~165)');",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"COLLEZ_VOTRE_ID_TOKEN_GOOGLE_ICI\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/google"
+          }
+        },
+        {
+          "name": "12. Google link (JWT)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"COLLEZ_VOTRE_ID_TOKEN_GOOGLE_ICI\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/google/link"
+          }
+        },
+        {
+          "name": "13. Add password (JWT)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"MonMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/add"
+          }
+        }
+      ]
+    }
+  ]
+}

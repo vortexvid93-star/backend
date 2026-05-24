@@ -1,0 +1,210 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-payments-v2",
+    "name": "BiblioTech — Abonnements & Paiements (v2.4)",
+    "description": "Plans, checkout, paiement mock, abonnements (prolongation / file d'attente).\n\n**`.env`** : `PAYMENT_PROVIDER=mock`, `PAYMENT_PUBLIC_BASE_URL=http://localhost:3000`\n\n**Scénarios après paiement réussi**\n- Même plan actif → **prolongation** `date_fin`\n- Plan différent → **file d'attente** (début à la fin de l'actuel) + notification\n\n**Ordre mock** : Login → plans → checkout-preview → init → simulate → status → subscriptions/current",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "plan_id", "value": "" },
+    { "key": "ref_transaction", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 — Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "A — Plans",
+      "item": [
+        {
+          "name": "GET /plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const p = pm.response.json().data?.[0];",
+                  "if (p?.id) pm.collectionVariables.set('plan_id', p.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/plans" }
+        },
+        {
+          "name": "GET /plans/:id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/plans/{{plan_id}}" }
+        }
+      ]
+    },
+    {
+      "name": "B — Checkout & paiement",
+      "item": [
+        {
+          "name": "GET /payments/checkout-preview",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/checkout-preview?plan_id={{plan_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "checkout-preview"],
+              "query": [{ "key": "plan_id", "value": "{{plan_id}}" }]
+            }
+          }
+        },
+        {
+          "name": "POST /payments/init",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('ref_transaction', pm.response.json().ref_transaction);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"plan_id\": \"{{plan_id}}\"\n}" },
+            "url": "{{baseUrl}}/payments/init"
+          }
+        },
+        {
+          "name": "POST /payments/mock/simulate (success)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"{{ref_transaction}}\",\n  \"outcome\": \"success\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/mock/simulate"
+          }
+        },
+        {
+          "name": "GET /payments/status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/payments/status?transaction_id={{ref_transaction}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "status"],
+              "query": [{ "key": "transaction_id", "value": "{{ref_transaction}}" }]
+            }
+          }
+        },
+        {
+          "name": "GET /payments/return",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/return?transaction_id={{ref_transaction}}"
+          }
+        },
+        {
+          "name": "GET /payments/pending",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/payments/pending"
+          }
+        }
+      ]
+    },
+    {
+      "name": "C — Abonnements",
+      "item": [
+        {
+          "name": "GET /subscriptions/current",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/current"
+          }
+        },
+        {
+          "name": "GET /subscriptions/upcoming",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/upcoming"
+          }
+        },
+        {
+          "name": "GET /subscriptions/summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/summary"
+          }
+        },
+        {
+          "name": "GET /subscriptions/compare",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/compare"
+          }
+        },
+        {
+          "name": "GET /subscriptions/history",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/subscriptions/history?page=1&limit=10&statut=SUCCES"
+          }
+        },
+        {
+          "name": "GET /notifications (vérif prolongation)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{baseUrl}}/notifications?type=ABONNEMENT&limit=5"
+          }
+        }
+      ]
+    }
+  ]
+}

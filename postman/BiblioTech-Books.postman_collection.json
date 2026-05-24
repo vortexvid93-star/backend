@@ -1,0 +1,293 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-books-v2",
+    "name": "BiblioTech — Livres & Accès API (v2.4)",
+    "description": "Catalogue, accès sécurisé (token + stream), progression, social.\n\n**Recherche `q`** : métadonnées uniquement (titre, ISBN, résumé, langue, auteurs) — pas le contenu du fichier.\n\n**Flux lecture** : resource → check → access → stream (302) → progress\n\n**Prérequis** : Login + abonnement ACTIF + livre PUBLIE avec ressource Cloudinary ou URL externe.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "lecture_token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis",
+      "item": [
+        {
+          "name": "0.1 Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.2 GET /me — abonnement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (!j.abonnement_actif) console.warn('⚠ Pas d\\'abonnement actif — /access → 403');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me" }
+        }
+      ]
+    },
+    {
+      "name": "4.1 — Catalogue",
+      "item": [
+        {
+          "name": "GET /books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('book_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books?page=1&limit=20&sort=recent"
+          }
+        },
+        {
+          "name": "GET /books?q= (métadonnées)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books?q=SEED&page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.2 — Détail & ressource",
+      "item": [
+        {
+          "name": "GET /books/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Bloc acces présent', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('acces');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}" }
+        },
+        {
+          "name": "GET /books/:id/resource",
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}/resource" }
+        }
+      ]
+    },
+    {
+      "name": "4.3 — Accès (check, active, token)",
+      "item": [
+        {
+          "name": "GET /books/:id/access/check?type=LECTURE",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/check?type=LECTURE"
+          }
+        },
+        {
+          "name": "GET /books/:id/access/active",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.token) {",
+                  "  pm.collectionVariables.set('lecture_token', j.token);",
+                  "  console.log('Token actif réutilisé');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access/active?type=LECTURE"
+          }
+        },
+        {
+          "name": "GET /books/:id/access?type=LECTURE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('lecture_token', j.token);",
+                  "  pm.test('Réponse enrichie', () => {",
+                  "    pm.expect(j).to.have.keys('stream_url','expires_in_sec','progression_creee','nb_ouvertures');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE"
+          }
+        },
+        {
+          "name": "POST /books/:id/access?type=LECTURE",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=LECTURE"
+          }
+        },
+        {
+          "name": "GET /books/:id/access?type=TELECHARGEMENT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/access?type=TELECHARGEMENT"
+          }
+        },
+        {
+          "name": "GET /books/access/recent",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/access/recent?page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.4 — Stream",
+      "item": [
+        {
+          "name": "GET /books/:id/stream?validate=true",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}&validate=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [
+                { "key": "token", "value": "{{lecture_token}}" },
+                { "key": "validate", "value": "true" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /books/:id/stream (302)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{book_id}}", "stream"],
+              "query": [{ "key": "token", "value": "{{lecture_token}}" }]
+            },
+            "description": "Désactiver « Follow redirects » dans Postman pour voir le 302."
+          }
+        },
+        {
+          "name": "GET /books/:id/stream — token utilisé (410)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/stream?token={{lecture_token}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.5–4.6 — Progression",
+      "item": [
+        {
+          "name": "GET /books/:id/progress",
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}/progress" }
+        },
+        {
+          "name": "PATCH /books/:id/progress",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page_actuelle\": 10,\n  \"duree_lecture_min\": 15\n}"
+            },
+            "url": "{{baseUrl}}/books/{{book_id}}/progress"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4.7–4.9 — Social",
+      "item": [
+        {
+          "name": "GET /books/:id/comments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/books/{{book_id}}/comments?page=1&limit=20" }
+        },
+        {
+          "name": "POST /books/:id/comments",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"contenu\": \"Excellent livre !\"\n}" },
+            "url": "{{baseUrl}}/books/{{book_id}}/comments"
+          }
+        },
+        {
+          "name": "POST /books/:id/rate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"valeur\": 4\n}" },
+            "url": "{{baseUrl}}/books/{{book_id}}/rate"
+          }
+        }
+      ]
+    }
+  ]
+}

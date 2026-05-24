@@ -1,0 +1,539 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-challenges-v3",
+    "name": "BiblioTech — Défis & Badges API (v3)",
+    "description": "Collection §6 enrichie — moteur métier (5 types de défis, badges, notifications), nouveaux endpoints.\n\n**Import** : `postman/BiblioTech-Challenges.postman_collection.json`\n\n**Prérequis**\n1. `npm run start:dev`\n2. `npm run db:seed`\n3. Lancer **0.1 Login** (remplit `access_token`)\n4. Enchaîner les dossiers dans l'ordre pour les variables auto\n\n**Variables auto**\n- `access_token`, `challenge_id`, `badge_id`, `livre_id`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "challenge_id", "value": "" },
+    { "key": "badge_id", "value": "" },
+    { "key": "livre_id", "value": "" },
+    { "key": "patch_page", "value": "1" },
+    { "key": "patch_duree", "value": "1" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT)",
+      "item": [
+        {
+          "name": "0.1 Login → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.1 — Catalogue défis",
+      "item": [
+        {
+          "name": "GET /challenges",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.length) pm.collectionVariables.set('challenge_id', j.data[0].id);",
+                  "pm.test('pourcentage + jours_restants', () => {",
+                  "  if (j.data?.length && j.data[0].ma_participation) {",
+                  "    pm.expect(j.data[0]).to.have.property('pourcentage');",
+                  "    pm.expect(j.data[0]).to.have.property('jours_restants');",
+                  "  }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/challenges?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["challenges"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "NB_LIVRES", "disabled": true },
+                { "key": "inscrit", "value": "false", "disabled": true },
+                { "key": "categorie_id", "value": "", "disabled": true },
+                { "key": "livre_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /challenges/recommended",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j.data).to.be.an('array');",
+                  "if (j.data?.length && !pm.collectionVariables.get('challenge_id')) {",
+                  "  pm.collectionVariables.set('challenge_id', j.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/challenges/recommended?limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["challenges", "recommended"],
+              "query": [{ "key": "limit", "value": "5" }]
+            }
+          }
+        },
+        {
+          "name": "GET /challenges/expiring",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/challenges/expiring?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["challenges", "expiring"],
+              "query": [{ "key": "days", "value": "7" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.2 — Détail & progression défi",
+      "item": [
+        {
+          "name": "GET /challenges/:id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('challenge_id')) throw new Error('challenge_id vide — GET /challenges');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('jours_restants');",
+                  "pm.expect(j).to.have.property('est_actif');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}"
+          }
+        },
+        {
+          "name": "GET /challenges/:id/progress",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('challenge_id')) throw new Error('challenge_id vide');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('prochaine_action');",
+                  "pm.expect(j.prochaine_action).to.have.property('code');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/progress"
+          }
+        },
+        {
+          "name": "GET /challenges/:id/stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/stats"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.3 — Rejoindre un défi",
+      "item": [
+        {
+          "name": "POST /challenges/:id/join",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 ou 409', () => pm.expect([201, 409]).to.include(pm.response.code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.4 — Badges",
+      "item": [
+        {
+          "name": "GET /badges",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.length) pm.collectionVariables.set('badge_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/badges?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["badges"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "obtenu", "value": "false", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /badges?obtenu=true",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/badges?obtenu=true&page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["badges"],
+              "query": [
+                { "key": "obtenu", "value": "true" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /badges/next",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/badges/next"
+          }
+        },
+        {
+          "name": "GET /badges/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/badges/{{badge_id}}"
+          }
+        },
+        {
+          "name": "GET /badges/:id/path",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/badges/{{badge_id}}/path"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.5 — Gamification & profil",
+      "item": [
+        {
+          "name": "GET /gamification/overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.keys('badges','defis','points_total');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/gamification/overview"
+          }
+        },
+        {
+          "name": "GET /me/challenges/summary",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/challenges/summary"
+          }
+        },
+        {
+          "name": "GET /me/challenges/:defiId",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('challenge_id')) throw new Error('challenge_id vide');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/challenges/{{challenge_id}}"
+          }
+        },
+        {
+          "name": "GET /me/challenges",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/challenges?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "challenges"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "statut", "value": "EN_COURS", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /me/actions (défis)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/actions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.6 — Défis liés à un livre",
+      "item": [
+        {
+          "name": "GET /books (récupérer livre_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.length) pm.collectionVariables.set('livre_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/books?page=1&limit=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /books/:id/challenges",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('livre_id')) throw new Error('livre_id vide — GET /books');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{livre_id}}/challenges"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6.7 — Tester progression (lecture)",
+      "description": "Flux complet : rejoindre un défi NB_LIVRES, ouvrir un livre, avancer jusqu'à 100 % → progression + badge + notifications.",
+      "item": [
+        {
+          "name": "POST /books/:id/access (ouvrir livre)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('livre_id')) throw new Error('livre_id vide');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/books/{{livre_id}}/access?type=LECTURE",
+              "host": ["{{baseUrl}}"],
+              "path": ["books", "{{livre_id}}", "access"],
+              "query": [{ "key": "type", "value": "LECTURE" }]
+            }
+          }
+        },
+        {
+          "name": "PATCH /books/:id/progress (terminer livre)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "/**",
+                  " * RG58 anti-triche : max 15 pages/min si duree_lecture_min est fourni,",
+                  " * sinon max 100 pages de saut en une fois.",
+                  " */",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "const token = pm.collectionVariables.get('access_token');",
+                  "const livreId = pm.collectionVariables.get('livre_id');",
+                  "if (!livreId || !token) throw new Error('livre_id ou access_token manquant');",
+                  "const headers = { Authorization: 'Bearer ' + token };",
+                  "const bookRes = await pm.sendRequest({",
+                  "  url: baseUrl + '/books/' + livreId,",
+                  "  method: 'GET',",
+                  "  header: headers,",
+                  "});",
+                  "const book = bookRes.json();",
+                  "const nombrePages = book.nombre_pages || 100;",
+                  "let pageActuelle = 0;",
+                  "try {",
+                  "  const progRes = await pm.sendRequest({",
+                  "    url: baseUrl + '/books/' + livreId + '/progress',",
+                  "    method: 'GET',",
+                  "    header: headers,",
+                  "  });",
+                  "  if (progRes.code === 200) pageActuelle = progRes.json().page_actuelle || 0;",
+                  "} catch (e) { /* pas encore de progression */ }",
+                  "const targetPage = nombrePages;",
+                  "const delta = Math.max(1, targetPage - pageActuelle);",
+                  "const dureeMin = Math.max(1, Math.ceil(delta / 15));",
+                  "pm.variables.set('patch_page', String(targetPage));",
+                  "pm.variables.set('patch_duree', String(dureeMin));",
+                  "console.log('Progression: page', pageActuelle, '→', targetPage, '| duree_lecture_min:', dureeMin);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 (pas 429 anti-triche)', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.test('livre terminé', () => pm.expect(j.statut).to.eql('TERMINE'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page_actuelle\": {{patch_page}},\n  \"duree_lecture_min\": {{patch_duree}}\n}"
+            },
+            "url": "{{baseUrl}}/books/{{livre_id}}/progress"
+          }
+        },
+        {
+          "name": "GET /me/challenges?statut=COMPLETE",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me/challenges?statut=COMPLETE&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["me", "challenges"],
+              "query": [
+                { "key": "statut", "value": "COMPLETE" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,622 @@
+// Schéma BiblioTech v2.3 — 25 tables
+// Les contraintes CHECK SQL sont dans prisma/sql/check_constraints.sql
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  moduleFormat    = "cjs"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum GenrePersonne {
+  M
+  F
+  AUTRE
+}
+
+enum TypeBibliotheque {
+  INTERNE
+  EXTERNE
+}
+
+enum StatutBibliotheque {
+  ACTIVE
+  ARCHIVEE
+}
+
+enum TypeLivre {
+  INTERNE
+  EXTERNE
+}
+
+enum StatutLivre {
+  PUBLIE
+  ARCHIVE
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  HYBRID
+}
+
+enum AuthRole {
+  USER
+  ADMIN
+}
+
+enum AuthStatut {
+  PENDING
+  ACTIF
+  BANNI
+}
+
+enum OtpType {
+  LOGIN
+  RESET_PASSWORD
+  VERIFY_EMAIL
+}
+
+enum TypeAccesToken {
+  LECTURE
+  TELECHARGEMENT
+}
+
+enum PlanType {
+  HEBDOMADAIRE
+  MENSUEL
+  ANNUEL
+}
+
+enum StatutPlan {
+  ACTIF
+  INACTIF
+}
+
+enum StatutPaiement {
+  EN_ATTENTE
+  SUCCES
+  ECHEC
+}
+
+enum StatutAbonnement {
+  ACTIF
+  EXPIRE
+  ANNULE
+}
+
+enum TypeRenouvellement {
+  NOUVEAU
+  RENOUVELLEMENT
+  UPGRADE
+}
+
+enum StatutProgression {
+  EN_COURS
+  TERMINE
+  ABANDONNE
+}
+
+enum StatutCommentaire {
+  PUBLIE
+  MODERE
+  SUPPRIME
+}
+
+enum TypeDefi {
+  NB_LIVRES
+  DUREE_LECTURE
+  CATEGORIE
+  AUTEUR
+  LIVRE_SPECIFIQUE
+}
+
+enum StatutDefi {
+  ACTIF
+  TERMINE
+  ANNULE
+}
+
+enum TypeNotification {
+  BADGE
+  DEFI
+  ABONNEMENT
+  SYSTEME
+}
+
+enum RaisonRecommandation {
+  SAME_GENRE
+  SAME_AUTHOR
+  POPULAR
+  TRENDING
+}
+
+enum StatutUserDefi {
+  EN_COURS
+  COMPLETE
+  ECHOUE
+}
+
+// ─── Tables indépendantes ────────────────────────────────────────────────────
+
+model Personne {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom              String         @db.VarChar(100)
+  prenom           String         @db.VarChar(100)
+  date_naissance   DateTime?      @db.Date
+  photo_profil_url String?        @db.VarChar(500)
+  bio              String?
+  genre            GenrePersonne?
+  ecole            String?        @db.VarChar(200)
+  niveau           String?        @db.VarChar(100)
+  points           Int            @default(0)
+  deleted_at       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @default(now()) @updatedAt
+
+  auth Auth?
+
+  @@index([id], map: "idx_personne_active", where: raw("deleted_at IS NULL"))
+  @@map("personne")
+}
+
+model Badge {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom         String   @unique @db.VarChar(150)
+  icone       String   @db.VarChar(500)
+  couleur     String   @db.VarChar(7)
+  description String?
+  points      Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  defis      Defi[]
+  userbadges UserBadge[]
+
+  @@map("badge")
+}
+
+model Categorie {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom         String    @unique @db.VarChar(100)
+  description String?
+  deleted_at  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  appartenir Appartenir[]
+  defis      Defi[]
+
+  @@index([id], map: "idx_categorie_active", where: raw("deleted_at IS NULL"))
+  @@map("categorie")
+}
+
+model PlanAbonnement {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plan        PlanType   @unique
+  prix        Decimal    @db.Decimal(10, 2)
+  statut      StatutPlan @default(ACTIF)
+  duree_jours Int
+  devise      String     @default("XOF") @db.VarChar(10)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
+
+  paiements   Paiement[]
+  abonnements Abonnement[]
+
+  @@map("planAbonnement")
+}
+
+model Bibliotheque {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom            String             @db.VarChar(200)
+  description    String?
+  couverture_url String?            @db.VarChar(500)
+  type           TypeBibliotheque
+  url_externe    String?            @db.VarChar(1000)
+  statut         StatutBibliotheque @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @default(now()) @updatedAt
+
+  appartient Appartient[]
+
+  @@map("bibliotheque")
+}
+
+model Auteur {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom        String    @db.VarChar(200)
+  prenom     String?   @db.VarChar(200)
+  bio        String?
+  deleted_at DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
+
+  livre_auteurs LivreAuteur[]
+  defis         Defi[]
+
+  @@index([nom], map: "idx_auteur_nom")
+  @@index([id], map: "idx_auteur_active", where: raw("deleted_at IS NULL"))
+  @@map("auteur")
+}
+
+model Livre {
+  id                   String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titre                String      @db.VarChar(300)
+  isbn                 String?     @unique @db.VarChar(20)
+  resume               String?
+  couverture_url       String?     @db.VarChar(500)
+  type_livre           TypeLivre
+  cloudinary_public_id String?     @db.VarChar(500)
+  url_externe_livre    String?     @db.VarChar(1000)
+  is_downloadable      Boolean     @default(false)
+  langue               String      @default("Français") @db.VarChar(50)
+  annee_publication    Int?
+  nombre_pages         Int?
+  statut               StatutLivre @default(PUBLIE)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @default(now()) @updatedAt
+
+  appartenir      Appartenir[]
+  appartient      Appartient[]
+  livre_auteurs   LivreAuteur[]
+  tokens_lecture  TokenLecture[]
+  progressions    ProgressionLecture[]
+  commentaires    Commentaire[]
+  statistique     StatistiqueLivre?
+  defis           Defi[]
+  notations       Noter[]
+  recommandations Recommandation[]
+
+  @@index([titre], map: "idx_livre_titre")
+  @@index([statut], map: "idx_livre_statut")
+  @@index([type_livre], map: "idx_livre_type")
+  @@index([is_downloadable], map: "idx_livre_downloadable", where: raw("is_downloadable = TRUE"))
+  @@map("livre")
+}
+
+// ─── Tables dépendantes ──────────────────────────────────────────────────────
+
+model Auth {
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  personne_id              String       @unique @db.Uuid
+  email                    String       @unique @db.VarChar(255)
+  numero_telephone         String?      @db.VarChar(20)
+  mot_de_passe_hash        String?      @db.VarChar(255)
+  google_id                String?      @unique @db.VarChar(255)
+  auth_provider            AuthProvider @default(LOCAL)
+  role                     AuthRole     @default(USER)
+  statut                   AuthStatut   @default(PENDING)
+  email_verified           Boolean      @default(false)
+  date_inscription         DateTime     @default(now())
+  derniere_connexion       DateTime?
+  refresh_token            String?      @db.VarChar(500)
+  refresh_token_expires_at DateTime?
+  jti                      String?      @unique @db.VarChar(100)
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @default(now()) @updatedAt
+
+  personne        Personne              @relation(fields: [personne_id], references: [id], onDelete: Cascade)
+  otps            Otp[]
+  tokens_lecture  TokenLecture[]
+  paiements       Paiement[]
+  abonnements     Abonnement[]
+  progressions    ProgressionLecture[]
+  commentaires    Commentaire[]
+  notifications   Notification[]
+  historiques     HistoriqueRecherche[]
+  recommandations Recommandation[]
+  notations       Noter[]
+  userbadges      UserBadge[]
+  userdefis       UserDefi[]
+
+  @@index([email], map: "idx_auth_email")
+  @@index([statut], map: "idx_auth_statut")
+  @@index([auth_provider], map: "idx_auth_provider")
+  @@index([email_verified], map: "idx_auth_email_verified", where: raw("email_verified = FALSE"))
+  @@map("auth")
+}
+
+model Otp {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id    String   @db.Uuid
+  email      String   @db.VarChar(255)
+  code_hash  String   @db.VarChar(255)
+  type       OtpType
+  expires_at DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  auth Auth @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+
+  @@index([auth_id, type], map: "idx_otp_auth_type_active", where: raw("used = FALSE"))
+  @@index([email, type, createdAt], map: "idx_otp_email_type_recent")
+  @@index([expires_at], map: "idx_otp_expires", where: raw("used = FALSE"))
+  @@map("otp")
+}
+
+model TokenLecture {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id    String         @db.Uuid
+  livre_id   String         @db.Uuid
+  token      String         @unique @db.VarChar(100)
+  type_acces TypeAccesToken
+  expires_at DateTime
+  used       Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@index([token], map: "idx_token_lecture_token", where: raw("used = FALSE"))
+  @@index([expires_at], map: "idx_token_lecture_expires", where: raw("used = FALSE"))
+  @@index([auth_id, createdAt(sort: Desc)], map: "idx_token_lecture_auth")
+  @@map("token_lecture")
+}
+
+model Paiement {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id          String         @db.Uuid
+  plan_id          String         @db.Uuid
+  montant          Decimal        @db.Decimal(10, 2)
+  devise           String         @default("XOF") @db.VarChar(10)
+  operateur        String?        @db.VarChar(50)
+  numero_telephone String?        @db.VarChar(20)
+  ref_transaction  String?        @unique @db.VarChar(200)
+  statut           StatutPaiement @default(EN_ATTENTE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @default(now()) @updatedAt
+
+  auth       Auth           @relation(fields: [auth_id], references: [id], onDelete: Restrict)
+  plan       PlanAbonnement @relation(fields: [plan_id], references: [id], onDelete: Restrict)
+  abonnement Abonnement?
+
+  @@index([auth_id], map: "idx_paiement_auth")
+  @@index([statut], map: "idx_paiement_statut")
+  @@index([plan_id], map: "idx_paiement_plan")
+  @@map("paiement")
+}
+
+model Abonnement {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paiement_id         String             @unique @db.Uuid
+  auth_id             String             @db.Uuid
+  plan_id             String             @db.Uuid
+  date_debut          DateTime
+  date_fin            DateTime
+  statut              StatutAbonnement   @default(ACTIF)
+  type_renouvellement TypeRenouvellement @default(NOUVEAU)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+
+  paiement Paiement       @relation(fields: [paiement_id], references: [id], onDelete: Restrict)
+  auth     Auth           @relation(fields: [auth_id], references: [id], onDelete: Restrict)
+  plan     PlanAbonnement @relation(fields: [plan_id], references: [id], onDelete: Restrict)
+
+  @@index([auth_id, statut, date_fin], map: "idx_abonnement_auth_statut_fin")
+  @@index([type_renouvellement], map: "idx_abonnement_type")
+  @@map("abonnement")
+}
+
+model ProgressionLecture {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id             String            @db.Uuid
+  livre_id            String            @db.Uuid
+  page_actuelle       Int               @default(0)
+  pourcentage         Float             @default(0)
+  duree_lecture_min   Int               @default(0)
+  statut              StatutProgression @default(EN_COURS)
+  derniere_maj        DateTime          @default(now())
+  date_debut          DateTime          @default(now())
+  date_fin            DateTime?
+  date_telechargement DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @default(now()) @updatedAt
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@unique([auth_id, livre_id])
+  @@index([auth_id], map: "idx_progression_auth")
+  @@index([livre_id], map: "idx_progression_livre")
+  @@index([statut], map: "idx_progression_statut")
+  @@map("progressionLecture")
+}
+
+model Commentaire {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id   String            @db.Uuid
+  livre_id  String            @db.Uuid
+  contenu   String
+  statut    StatutCommentaire @default(PUBLIE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@index([livre_id], map: "idx_commentaire_livre")
+  @@index([auth_id], map: "idx_commentaire_auth")
+  @@map("commentaire")
+}
+
+model StatistiqueLivre {
+  livre_id       String   @id @db.Uuid
+  nb_lectures    Int      @default(0)
+  nb_terminees   Int      @default(0)
+  note_moyenne   Float?
+  nb_notes       Int      @default(0)
+  nb_lectures_7j Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@map("StatistiqueLivre")
+}
+
+model Defi {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titre           String     @db.VarChar(200)
+  description     String?
+  type            TypeDefi
+  objectif_valeur Int
+  points_bonus    Int        @default(0)
+  date_debut      DateTime
+  date_fin        DateTime
+  statut          StatutDefi @default(ACTIF)
+  badge_id        String     @db.Uuid
+  categorie_id    String?    @db.Uuid
+  livre_id        String?    @db.Uuid
+  auteur_id       String?    @db.Uuid
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+
+  badge     Badge      @relation(fields: [badge_id], references: [id], onDelete: Restrict)
+  categorie Categorie? @relation(fields: [categorie_id], references: [id], onDelete: Restrict)
+  livre     Livre?     @relation(fields: [livre_id], references: [id], onDelete: Restrict)
+  auteur    Auteur?    @relation(fields: [auteur_id], references: [id], onDelete: Restrict)
+  userdefis UserDefi[]
+
+  @@index([statut], map: "idx_defi_statut")
+  @@index([type], map: "idx_defi_type")
+  @@map("defi")
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id   String           @db.Uuid
+  titre     String           @db.VarChar(200)
+  contenu   String?
+  type      TypeNotification
+  lu        Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @default(now()) @updatedAt
+
+  auth Auth @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+
+  @@index([auth_id], map: "idx_notification_auth")
+  @@index([auth_id, lu], map: "idx_notification_lu", where: raw("lu = FALSE"))
+  @@map("notification")
+}
+
+model HistoriqueRecherche {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id      String   @db.Uuid
+  terme        String   @db.VarChar(300)
+  nb_resultats Int      @default(0)
+  a_clique     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  auth Auth @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+
+  @@index([auth_id], map: "idx_historique_auth")
+  @@index([createdAt(sort: Desc)], map: "idx_historique_date")
+  @@index([nb_resultats], map: "idx_historique_no_result", where: raw("nb_resultats = 0"))
+  @@map("HistoriqueRecherche")
+}
+
+model Recommandation {
+  id        String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id   String               @db.Uuid
+  livre_id  String               @db.Uuid
+  score     Decimal              @db.Decimal(4, 3)
+  raison    RaisonRecommandation
+  vu        Boolean              @default(false)
+  clique    Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @default(now()) @updatedAt
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@unique([auth_id, livre_id])
+  @@index([auth_id], map: "idx_recommandation_auth")
+  @@index([score(sort: Desc)], map: "idx_recommandation_score")
+  @@map("recommandation")
+}
+
+// ─── Tables d'association ────────────────────────────────────────────────────
+
+model Appartenir {
+  livre_id     String @db.Uuid
+  categorie_id String @db.Uuid
+
+  livre     Livre     @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+  categorie Categorie @relation(fields: [categorie_id], references: [id], onDelete: Cascade)
+
+  @@id([livre_id, categorie_id])
+  @@map("appartenir")
+}
+
+model Appartient {
+  bibliotheque_id String @db.Uuid
+  livre_id        String @db.Uuid
+
+  bibliotheque Bibliotheque @relation(fields: [bibliotheque_id], references: [id], onDelete: Cascade)
+  livre        Livre        @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@id([bibliotheque_id, livre_id])
+  @@map("appartient")
+}
+
+model LivreAuteur {
+  livre_id  String @db.Uuid
+  auteur_id String @db.Uuid
+
+  livre  Livre  @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+  auteur Auteur @relation(fields: [auteur_id], references: [id], onDelete: Cascade)
+
+  @@id([livre_id, auteur_id])
+  @@map("LivreAuteur")
+}
+
+model Noter {
+  auth_id   String   @db.Uuid
+  livre_id  String   @db.Uuid
+  valeur    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@id([auth_id, livre_id])
+  @@map("noter")
+}
+
+model UserBadge {
+  auth_id   String   @db.Uuid
+  badge_id  String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badge_id], references: [id], onDelete: Cascade)
+
+  @@id([auth_id, badge_id])
+  @@map("userbadge")
+}
+
+model UserDefi {
+  auth_id         String         @db.Uuid
+  defi_id         String         @db.Uuid
+  progression     Int            @default(0)
+  statut          StatutUserDefi @default(EN_COURS)
+  date_completion DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+
+  auth Auth @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  defi Defi @relation(fields: [defi_id], references: [id], onDelete: Cascade)
+
+  @@id([auth_id, defi_id])
+  @@index([statut], map: "idx_userdefi_statut")
+  @@map("userdefi")
+}

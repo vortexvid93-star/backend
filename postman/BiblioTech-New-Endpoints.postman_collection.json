@@ -1,0 +1,454 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-new-endpoints-v1",
+    "name": "BiblioTech — Nouveaux endpoints (v2.4)",
+    "description": "Tests des endpoints ajoutés : changement mot de passe, commentaires (edit/delete), note (PATCH), quitter défi, effacer historique recherche, health check.\n\n**Prérequis**\n1. `npm run start:dev` (API sur port 3000)\n2. `npm run db:seed` (compte `password@biblio.tech` / `MonMotDePasse123`)\n3. Abonnement actif pour commentaires / notes / défis\n\n**Ordre conseillé** : dossier 0 → 1 → 2 → … (les scripts remplissent les variables automatiquement).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "new_password", "value": "MonNouveauMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "book_id", "value": "" },
+    { "key": "comment_id", "value": "" },
+    { "key": "challenge_id", "value": "" },
+    { "key": "search_history_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis",
+      "item": [
+        {
+          "name": "0.1 GET /health (sans auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('DB up', () => {",
+                  "  pm.expect(j.status).to.eql('ok');",
+                  "  pm.expect(j.database).to.eql('up');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "0.2 Login → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "0.3 GET /books → book_id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('book_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books?page=1&limit=5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Auth : changement mot de passe",
+      "item": [
+        {
+          "name": "POST /auth/password/change",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('Message succès', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('modifié');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"newPassword\": \"{{new_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/change"
+          }
+        },
+        {
+          "name": "POST /auth/password/login (nouveau MDP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 avec nouveau MDP', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "  pm.collectionVariables.set('password', pm.collectionVariables.get('new_password'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{new_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        },
+        {
+          "name": "POST /auth/password/change (remettre ancien MDP)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{new_password}}\",\n  \"newPassword\": \"MonMotDePasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/change"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Livres : commentaires & note",
+      "item": [
+        {
+          "name": "POST /books/:id/comments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('comment_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contenu\": \"Commentaire de test Postman — à modifier.\"\n}"
+            },
+            "url": "{{baseUrl}}/books/{{book_id}}/comments"
+          }
+        },
+        {
+          "name": "PATCH /books/:id/comments/:commentId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contenu modifié', () => {",
+                  "  pm.expect(pm.response.json().contenu).to.include('modifié');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contenu\": \"Commentaire modifié via PATCH Postman.\"\n}"
+            },
+            "url": "{{baseUrl}}/books/{{book_id}}/comments/{{comment_id}}"
+          }
+        },
+        {
+          "name": "POST /books/:id/rate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"valeur\": 4\n}" },
+            "url": "{{baseUrl}}/books/{{book_id}}/rate"
+          }
+        },
+        {
+          "name": "PATCH /books/:id/rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('Note = 5', () => pm.expect(pm.response.json().valeur).to.eql(5));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"valeur\": 5\n}" },
+            "url": "{{baseUrl}}/books/{{book_id}}/rate"
+          }
+        },
+        {
+          "name": "GET /books/:id (vérifier ma_note)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('ma_note présente', () => {",
+                  "  pm.expect(pm.response.json().ma_note).to.eql(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "DELETE /books/:id/comments/:commentId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/books/{{book_id}}/comments/{{comment_id}}"
+          }
+        },
+        {
+          "name": "GET /books/:id/comments (commentaire absent)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{book_id}}/comments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — Défis : quitter sans progression",
+      "item": [
+        {
+          "name": "GET /challenges (non inscrit)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "const candidat = j.data?.find(d => !d.ma_participation) || j.data?.[0];",
+                  "if (candidat?.id) pm.collectionVariables.set('challenge_id', candidat.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/challenges?inscrit=false&limit=5"
+          }
+        },
+        {
+          "name": "POST /challenges/:id/join",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join"
+          }
+        },
+        {
+          "name": "DELETE /challenges/:id/join",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('Message', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('annulée');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join"
+          }
+        },
+        {
+          "name": "DELETE /challenges/:id/join (404 — déjà quitté)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('404 attendu', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/challenges/{{challenge_id}}/join"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — Recherche : effacer tout l'historique",
+      "item": [
+        {
+          "name": "GET /search?q=roman",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search?q=roman&page=1&limit=5"
+          }
+        },
+        {
+          "name": "GET /search?q=livre",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search?q=livre&page=1&limit=5"
+          }
+        },
+        {
+          "name": "GET /search/history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]?.id) pm.collectionVariables.set('search_history_id', j.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search/history"
+          }
+        },
+        {
+          "name": "DELETE /search/history (tout effacer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('nb_supprimees', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('nb_supprimees');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/search/history"
+          }
+        },
+        {
+          "name": "GET /search/history (vide)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Liste vide', () => {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array').that.is.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/search/history"
+          }
+        }
+      ]
+    }
+  ]
+}

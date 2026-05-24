@@ -1,0 +1,455 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-discovery-v1",
+    "name": "BiblioTech — Recommandations & Recherche API",
+    "description": "Collection §7 — Recommandations (moteur métier), recherche, notifications.\n\n**Ordre conseillé** : 0.1 Login → 7.0 POST /recommendations/refresh → 7.1+ …\n\n**Variables auto** : `recommendation_id`, `livre_id`, `search_history_id`, `notification_id`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "email_password", "value": "password@biblio.tech" },
+    { "key": "password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "recommendation_id", "value": "" },
+    { "key": "livre_id", "value": "" },
+    { "key": "search_history_id", "value": "" },
+    { "key": "notification_id", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT)",
+      "item": [
+        {
+          "name": "0.1 Login mot de passe → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('access_token', pm.response.json().access_token.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email_password}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.0 — Générer recommandations (moteur)",
+      "item": [
+        {
+          "name": "POST /recommendations/refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('upserted');",
+                  "pm.expect(j).to.have.property('summary');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"limit\": 50\n}" },
+            "url": "{{baseUrl}}/recommendations/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.1 — Liste & filtres",
+      "item": [
+        {
+          "name": "GET /recommendations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.data?.[0]) {",
+                  "  pm.collectionVariables.set('recommendation_id', j.data[0].id);",
+                  "  pm.collectionVariables.set('livre_id', j.data[0].livre.id);",
+                  "  pm.test('enrichi', () => {",
+                  "    pm.expect(j.data[0]).to.have.property('raison_libelle');",
+                  "    pm.expect(j.data[0]).to.have.property('contexte');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/recommendations?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "raison", "value": "SAME_GENRE", "disabled": true },
+                { "key": "vu", "value": "false", "disabled": true },
+                { "key": "score_min", "value": "0.7", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /recommendations?vu=false",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/recommendations?vu=false&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations"],
+              "query": [
+                { "key": "vu", "value": "false" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /recommendations/summary",
+          "request": { "method": "GET", "url": "{{baseUrl}}/recommendations/summary" }
+        },
+        {
+          "name": "GET /recommendations/picks",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/picks?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "picks"],
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "GET /recommendations/by-reason",
+          "request": { "method": "GET", "url": "{{baseUrl}}/recommendations/by-reason" }
+        }
+      ]
+    },
+    {
+      "name": "7.2 — Détail & similaires",
+      "item": [
+        {
+          "name": "GET /recommendations/:id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/recommendations/{{recommendation_id}}" }
+        },
+        {
+          "name": "GET /recommendations/for-book/:livreId",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/for-book/{{livre_id}}?limit=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "for-book", "{{livre_id}}"],
+              "query": [{ "key": "limit", "value": "12" }]
+            }
+          }
+        },
+        {
+          "name": "GET /books/:id/similar",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/books/{{livre_id}}/similar?limit=12"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.3 — Interactions",
+      "item": [
+        {
+          "name": "PATCH /recommendations/:id/interact (vu)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"vu\": true\n}" },
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}/interact"
+          }
+        },
+        {
+          "name": "PATCH /recommendations/:id/interact (clique)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"clique\": true\n}" },
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}/interact"
+          }
+        },
+        {
+          "name": "PATCH /recommendations/:id/dismiss",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/recommendations/{{recommendation_id}}/dismiss"
+          }
+        },
+        {
+          "name": "PATCH /recommendations/mark-all-seen",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/recommendations/mark-all-seen"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.4 — Dashboard",
+      "item": [
+        {
+          "name": "GET /me/dashboard (recos)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "pm.expect(j).to.have.property('recommandations');",
+                  "pm.expect(j.recommandations).to.have.property('picks');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/me/dashboard" }
+        }
+      ]
+    },
+    {
+      "name": "7.5 — Recherche livres",
+      "item": [
+        {
+          "name": "GET /search?q=roman",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('terme présent', () => pm.expect(json).to.have.property('terme'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search?q=roman&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [
+                { "key": "q", "value": "roman" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "langue", "value": "Français", "disabled": true },
+                { "key": "categorie_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /search?q=a (400 — trop court)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search?q=a",
+              "host": ["{{baseUrl}}"],
+              "path": ["search"],
+              "query": [{ "key": "q", "value": "a" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.6 — Historique recherche",
+      "item": [
+        {
+          "name": "GET /search/history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data?.[0]?.id) {",
+                  "  pm.collectionVariables.set('search_history_id', json.data[0].id);",
+                  "  console.log('search_history_id =', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/search/history?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["search", "history"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.7 — Historique (actions)",
+      "item": [
+        {
+          "name": "PATCH /search/history/:id/click",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/search/history/{{search_history_id}}/click"
+          }
+        },
+        {
+          "name": "DELETE /search/history/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/search/history/{{search_history_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7.8 — Notifications",
+      "item": [
+        {
+          "name": "GET /notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('nb_non_lues', () => pm.expect(json).to.have.property('nb_non_lues'));",
+                  "if (json.data?.[0]?.id) {",
+                  "  pm.collectionVariables.set('notification_id', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "lu", "value": "false", "disabled": true },
+                { "key": "type", "value": "SYSTEME", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /notifications?lu=false (non lues)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?lu=false&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "lu", "value": "false" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH /notifications/:id/read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/{{notification_id}}/read"
+          }
+        },
+        {
+          "name": "PATCH /notifications/read-all",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('updated_count', () => pm.expect(pm.response.json()).to.have.property('updated_count'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        }
+      ]
+    }
+  ]
+}
