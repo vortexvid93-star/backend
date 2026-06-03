@@ -955,23 +955,24 @@ Toutes les routes : **JWT (ACTIF)**.
 
 ## 10. Admin — `/admin/*`
 
-**JWT + rôle ADMIN** sur toutes les routes.
+**JWT + rôle ADMIN** sur toutes les routes (**46 opérations** documentées dans Swagger).
+
+**Inventaire complet (méthode + chemin par tag)** : [ADMIN-ROUTES-SWAGGER.md](./ADMIN-ROUTES-SWAGGER.md).
 
 Erreurs communes : **401**, **403** (non admin), **404**, **409** (doublons), **400** (validation fichier/ISBN).
 
-| Préfixe | Usage back-office |
-|--------|-------------------|
-| `/admin/users` | Liste, création admin, fiche, ban/unban |
-| `/admin/books` | CRUD livres, multipart `file` + `couverture`, catégories/auteurs |
-| `/admin/libraries` | CRUD bibliothèques, associer livres |
-| `/admin/plans` | CRUD tarifs |
-| `/admin/challenges` | CRUD défis, participants, annulation |
-| `/admin/badges` | CRUD badges, upload `icone` |
-| `/admin/categories`, `/admin/auteurs` | Référentiels |
-| `/admin/comments` | Modération avis |
-| `/admin/subscriptions` | Liste, annulation |
-| `/admin/payments` | Suivi transactions |
-| `/admin/stats/*` | Dashboard, analytics livres/users/recherche |
+| Tag Swagger | Préfixe | Opérations |
+|-------------|---------|------------|
+| Admin — Utilisateurs | `/admin/users` | 5 — liste, création, fiche, ban/unban |
+| Admin — Livres | `/admin/books` | 6 — CRUD, archive, auteurs/catégories |
+| Admin — Bibliothèques | `/admin/libraries` | 6 — CRUD, archive, associer/retirer livres |
+| Admin — Plans | `/admin/plans` | 3 |
+| Admin — Défis | `/admin/challenges` | 5 — CRUD, annulation, participants |
+| Admin — Badges | `/admin/badges` | 3 — CRUD, upload `icone` |
+| Admin — Catégories | `/admin/categories` | 4 |
+| Admin — Auteurs | `/admin/auteurs` | 4 |
+| Admin — Modération & abonnements | `/admin/comments`, `/admin/payments`, `/admin/subscriptions` | 6 |
+| Admin — Statistiques | `/admin/stats/*` | 4 — dashboard, users, books, search-terms |
 
 ### Exemples détaillés admin
 
@@ -1021,4 +1022,4 @@ Erreurs communes : **401**, **403** (non admin), **404**, **409** (doublons), **
 
 ---
 
-*Fin de la référence — ~130 endpoints. Pour les champs exacts des DTO, utiliser Swagger `/api/docs`.*
+*Fin de la référence — 156 opérations HTTP (46 admin). Pour les champs exacts des DTO, utiliser Swagger `/api/docs` ou [ADMIN-ROUTES-SWAGGER.md](./ADMIN-ROUTES-SWAGGER.md).*
