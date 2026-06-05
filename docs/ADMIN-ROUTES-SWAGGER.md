@@ -2,9 +2,13 @@
 
 Source : [`openapi.json`](./openapi.json) (généré depuis le code) et contrôleurs sous [`../src/admin/`](../src/admin/).
 
+**Contrat envoi / réception** : index [**ADMIN-API-CONTRACT.md**](./ADMIN-API-CONTRACT.md) · **4 parties** : [admin/PARTIE-1-REFERENTIELS.md](./admin/PARTIE-1-REFERENTIELS.md) … — `npm run docs:admin`.
+
+**Matrice d’intégration web** : [apps/web/docs/ADMIN-INTEGRATION.md](../../apps/web/docs/ADMIN-INTEGRATION.md).
+
 **Consultation live** : `http://localhost:3000/api/docs` — filtrez par les tags commençant par **Admin —**.
 
-**Régénération** : `npm run docs:openapi` (depuis `backend/`).
+**Régénération** : `npm run docs:admin` ou `npm run docs:openapi` (depuis `backend/`).
 
 ---
 

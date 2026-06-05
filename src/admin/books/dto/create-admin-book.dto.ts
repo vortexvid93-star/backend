@@ -1,4 +1,4 @@
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -11,12 +11,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { TypeLivre } from '../../../../generated/prisma/enums';
-
-function toOptionalBoolean(value: unknown): boolean | undefined {
-  if (value === true || value === 'true') return true;
-  if (value === false || value === 'false') return false;
-  return undefined;
-}
+import { TransformMultipartBoolean } from '../../../common/transforms/parse-multipart-boolean';
 
 export class CreateAdminBookDto {
   @IsString()
@@ -35,7 +30,7 @@ export class CreateAdminBookDto {
   url_externe_livre?: string;
 
   @IsOptional()
-  @Transform(({ value }) => toOptionalBoolean(value))
+  @TransformMultipartBoolean()
   @IsBoolean()
   is_downloadable?: boolean;
 

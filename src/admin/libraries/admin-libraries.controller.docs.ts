@@ -87,6 +87,17 @@ export const AdminLibrariesArchiveDocs = () =>
     ApiNotFoundResponse(),
   );
 
+export const AdminLibrariesUnarchiveDocs = () =>
+  applyDecorators(
+    libraryIdParam(),
+    ApiOperation({
+      summary: 'Désarchiver une bibliothèque',
+      description: 'Passe `statut` à ACTIVE (visible dans le catalogue utilisateur).',
+    }),
+    ApiOkResponse({ type: ArchiveStatutSchema }),
+    ApiNotFoundResponse(),
+  );
+
 export const AdminLibrariesAddBooksDocs = () =>
   applyDecorators(
     libraryIdParam(),

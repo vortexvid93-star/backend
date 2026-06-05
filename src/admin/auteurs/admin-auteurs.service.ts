@@ -30,6 +30,7 @@ export class AdminAuteursService {
     const [rows, total] = await Promise.all([
       this.prisma.auteur.findMany({
         where,
+        include: { _count: { select: { livre_auteurs: true } } },
         orderBy: { nom: 'asc' },
         skip,
         take: limit,

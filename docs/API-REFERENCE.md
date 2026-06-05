@@ -957,7 +957,7 @@ Toutes les routes : **JWT (ACTIF)**.
 
 **JWT + rôle ADMIN** sur toutes les routes (**46 opérations** documentées dans Swagger).
 
-**Inventaire complet (méthode + chemin par tag)** : [ADMIN-ROUTES-SWAGGER.md](./ADMIN-ROUTES-SWAGGER.md).
+**Inventaire des routes** : [ADMIN-ROUTES-SWAGGER.md](./ADMIN-ROUTES-SWAGGER.md) · **Contrat envoi/réception** : [ADMIN-API-CONTRACT.md](./ADMIN-API-CONTRACT.md) · **Intégration dashboard** : [apps/web/docs/ADMIN-INTEGRATION.md](../../apps/web/docs/ADMIN-INTEGRATION.md).
 
 Erreurs communes : **401**, **403** (non admin), **404**, **409** (doublons), **400** (validation fichier/ISBN).
 

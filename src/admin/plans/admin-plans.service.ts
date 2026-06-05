@@ -38,11 +38,7 @@ export class AdminPlansService {
         },
       });
 
-      return {
-        id: plan.id,
-        plan: plan.plan,
-        prix: Number(plan.prix),
-      };
+      return mapAdminPlanListItem(plan);
     } catch (error) {
       this.rethrowUniquePlan(error);
       throw error;

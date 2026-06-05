@@ -145,6 +145,17 @@ export class AdminLibrariesService {
     return { statut: updated.statut };
   }
 
+  async unarchiveLibrary(libraryId: string) {
+    await this.findBibliothequeOrThrow(libraryId);
+
+    const updated = await this.prisma.bibliotheque.update({
+      where: { id: libraryId },
+      data: { statut: StatutBibliotheque.ACTIVE },
+    });
+
+    return { statut: updated.statut };
+  }
+
   async addBooks(libraryId: string, dto: AddLibraryBooksDto) {
     const library = await this.findBibliothequeOrThrow(libraryId);
 

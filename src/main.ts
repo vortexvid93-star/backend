@@ -6,9 +6,11 @@ import { setupSwagger } from './common/swagger/setup-swagger';
 const DEFAULT_DEV_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:4200',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
 ];
 
 function resolveCorsOptions(): {
@@ -53,6 +55,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
   setupSwagger(app);

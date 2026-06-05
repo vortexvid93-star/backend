@@ -19,6 +19,7 @@ import { AdminRoleGuard } from '../guards/admin-role.guard';
 import {
   AdminLibrariesAddBooksDocs,
   AdminLibrariesArchiveDocs,
+  AdminLibrariesUnarchiveDocs,
   AdminLibrariesControllerDocs,
   AdminLibrariesCreateDocs,
   AdminLibrariesListDocs,
@@ -57,6 +58,13 @@ export class AdminLibrariesController {
   @HttpCode(HttpStatus.OK)
   archiveLibrary(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminLibrariesService.archiveLibrary(id);
+  }
+
+  @Patch(':id/unarchive')
+  @AdminLibrariesUnarchiveDocs()
+  @HttpCode(HttpStatus.OK)
+  unarchiveLibrary(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminLibrariesService.unarchiveLibrary(id);
   }
 
   @Post(':id/books')

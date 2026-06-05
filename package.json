@@ -29,6 +29,7 @@
     "db:seed": "npx ts-node --project prisma/tsconfig.seed.json prisma/seed.ts",
     "docs:openapi": "npm run build && node tools/dump-openapi.mjs",
     "docs:frontend": "npm run docs:openapi && node tools/generate-frontend-api-readme.mjs",
+    "docs:admin": "npm run docs:openapi && node tools/generate-admin-api-contract.mjs",
     "docs:api-reference": "node tools/generate-api-reference.mjs"
   },
   "prisma": {

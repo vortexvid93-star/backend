@@ -591,7 +591,7 @@ PAWAPAY_PUBLIC_BASE_URL=https://VOTRE-ID.ngrok-free.app
 
 ### 5.10 Admin (back-office)
 
-Préfixe `/admin/*`. **JWT + rôle ADMIN** (**46 opérations**). Inventaire Swagger : [ADMIN-ROUTES-SWAGGER.md](./docs/ADMIN-ROUTES-SWAGGER.md) · [API-REFERENCE.md § 10](./docs/API-REFERENCE.md#10-admin--admin).
+Préfixe `/admin/*`. **JWT + rôle ADMIN** (**46 opérations**). Docs : [ADMIN-API-CONTRACT.md](./docs/ADMIN-API-CONTRACT.md) (envoi/réception) · [ADMIN-ROUTES-SWAGGER.md](./docs/ADMIN-ROUTES-SWAGGER.md) (inventaire) · [ADMIN-INTEGRATION.md](../apps/web/docs/ADMIN-INTEGRATION.md) (intégration web) · [API-REFERENCE.md § 10](./docs/API-REFERENCE.md#10-admin--admin). Régénérer : `npm run docs:admin`.
 
 | Domaine | Routes principales | Dans la vraie vie |
 |---------|-------------------|-------------------|

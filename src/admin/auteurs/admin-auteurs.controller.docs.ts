@@ -29,7 +29,8 @@ export const AdminAuteursListDocs = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Liste admin des auteurs',
-      description: 'Auteurs actifs uniquement (`deleted_at IS NULL`). Recherche `q` sur le nom.',
+      description:
+        'Auteurs actifs uniquement (`deleted_at IS NULL`). `nb_livres` = liaisons `LivreAuteur`. Recherche `q` sur le nom.',
     }),
     ApiOkResponse({ type: PaginatedAdminAuteurListSchema }),
   );

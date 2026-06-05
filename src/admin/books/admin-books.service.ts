@@ -186,7 +186,9 @@ export class AdminBooksService {
           : existing.is_downloadable,
     };
 
-    if (existing.type_livre === TypeLivre.EXTERNE) {
+    if (existing.type_livre === TypeLivre.INTERNE) {
+      merged.url_externe_livre = null;
+    } else {
       merged.is_downloadable = false;
     }
 

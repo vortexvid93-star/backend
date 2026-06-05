@@ -7,6 +7,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { TransformMultipartBoolean } from '../../../common/transforms/parse-multipart-boolean';
 
 export class UpdateAdminBookDto {
   @IsOptional()
@@ -25,6 +26,7 @@ export class UpdateAdminBookDto {
   url_externe_livre?: string;
 
   @IsOptional()
+  @TransformMultipartBoolean()
   @IsBoolean()
   is_downloadable?: boolean;
 

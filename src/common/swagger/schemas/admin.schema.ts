@@ -236,6 +236,7 @@ export class AdminAuteurListItemSchema {
   @ApiProperty() nom: string;
   @ApiPropertyOptional({ nullable: true }) prenom: string | null;
   @ApiPropertyOptional({ nullable: true }) bio: string | null;
+  @ApiProperty() nb_livres: number;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
 
