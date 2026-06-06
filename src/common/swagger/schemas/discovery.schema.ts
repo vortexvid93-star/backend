@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RaisonRecommandation } from '../../../../generated/prisma/enums';
+import { RaisonRecommandation, TypeNotification } from '../../../../generated/prisma/enums';
 import { PaginationMetaSchema } from './common.schema';
 import { AuteurBriefSchema, CategorieBriefSchema } from './shared.schema';
 import { TypeLivre } from '../../../../generated/prisma/enums';
@@ -76,7 +76,7 @@ export class NotificationSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() titre: string;
   @ApiProperty() contenu: string;
-  @ApiProperty() type: string;
+  @ApiProperty({ enum: TypeNotification }) type: TypeNotification;
   @ApiProperty() lu: boolean;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }

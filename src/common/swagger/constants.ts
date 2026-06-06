@@ -25,5 +25,6 @@ export const SWAGGER_TAGS = {
   ADMIN_CHALLENGES: 'Admin — Défis',
   ADMIN_BADGES: 'Admin — Badges',
   ADMIN_MODERATION: 'Admin — Modération & abonnements',
+  ADMIN_NOTIFICATIONS: 'Admin — Notifications',
   ADMIN_STATS: 'Admin — Statistiques',
 } as const;

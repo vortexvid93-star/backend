@@ -21,6 +21,8 @@ import { AdminCommentsController } from './comments/admin-comments.controller';
 import { AdminCommentsService } from './comments/admin-comments.service';
 import { AdminSubscriptionsController } from './subscriptions/admin-subscriptions.controller';
 import { AdminSubscriptionsService } from './subscriptions/admin-subscriptions.service';
+import { AdminNotificationsController } from './notifications/admin-notifications.controller';
+import { AdminNotificationsService } from './notifications/admin-notifications.service';
 import { AdminPaymentsController } from './payments/admin-payments.controller';
 import { AdminPaymentsService } from './payments/admin-payments.service';
 import { AdminStatsController } from './stats/admin-stats.controller';
@@ -39,6 +41,7 @@ import { AdminStatsService } from './stats/admin-stats.service';
     AdminBadgesController,
     AdminCommentsController,
     AdminSubscriptionsController,
+    AdminNotificationsController,
     AdminPaymentsController,
     AdminStatsController,
   ],
@@ -53,6 +56,7 @@ import { AdminStatsService } from './stats/admin-stats.service';
     AdminBadgesService,
     AdminCommentsService,
     AdminSubscriptionsService,
+    AdminNotificationsService,
     AdminPaymentsService,
     AdminStatsService,
     AdminRoleGuard,

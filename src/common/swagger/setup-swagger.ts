@@ -143,6 +143,10 @@ function buildSwaggerConfig() {
       'Back-office : modération commentaires, abonnements, paiements (JWT ADMIN uniquement).',
     )
     .addTag(
+      SWAGGER_TAGS.ADMIN_NOTIFICATIONS,
+      'Back-office : envoi de notifications in-app (cible unique ou diffusion globale).',
+    )
+    .addTag(
       SWAGGER_TAGS.ADMIN_STATS,
       'Back-office : dashboard et analytics (JWT ADMIN uniquement).',
     )

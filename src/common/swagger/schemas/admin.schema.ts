@@ -236,7 +236,6 @@ export class AdminAuteurListItemSchema {
   @ApiProperty() nom: string;
   @ApiPropertyOptional({ nullable: true }) prenom: string | null;
   @ApiPropertyOptional({ nullable: true }) bio: string | null;
-  @ApiProperty() nb_livres: number;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
 }
 
@@ -416,4 +415,11 @@ export class AdminChallengeCreateSchema {
 export class AdminChallengeCancelSchema {
   @ApiProperty() statut: string;
   @ApiProperty() nb_utilisateurs_echoues: number;
+}
+
+export class AdminNotificationCreateSchema {
+  @ApiProperty({ enum: ['UTILISATEUR', 'TOUS'] }) cible: string;
+  @ApiProperty() created: number;
+  @ApiPropertyOptional({ format: 'uuid' }) auth_id?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) notification_id?: string;
 }

@@ -1,0 +1,6 @@
+-- AlterEnum
+ALTER TYPE "TypeNotification" ADD VALUE 'ANNONCE';
+ALTER TYPE "TypeNotification" ADD VALUE 'PROMOTION';
+ALTER TYPE "TypeNotification" ADD VALUE 'MAINTENANCE';
+ALTER TYPE "TypeNotification" ADD VALUE 'ACTUALITE';
+ALTER TYPE "TypeNotification" ADD VALUE 'ALERTE';
