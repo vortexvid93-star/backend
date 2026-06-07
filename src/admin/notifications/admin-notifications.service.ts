@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthStatut } from '../../../generated/prisma/enums';
+import { AuthStatut, TypeNotification } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { CreateAdminNotificationDto } from './dto/create-admin-notification.dto';
 
@@ -30,7 +30,7 @@ export class AdminNotificationsService {
           auth_id: authId,
           titre,
           contenu,
-          type: dto.type,
+          type: dto.type as TypeNotification,
         },
       });
 
@@ -56,7 +56,7 @@ export class AdminNotificationsService {
         auth_id: recipient.id,
         titre,
         contenu,
-        type: dto.type,
+        type: dto.type as TypeNotification,
       })),
     });
 
