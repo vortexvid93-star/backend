@@ -174,7 +174,7 @@ export class YoutubeService {
         where: { id: chaineId },
         data: { last_synced_at: new Date() },
       });
-      return { upserted: 0, skipped: 0 };
+      return { upserted: 0, skipped: 0, archived: 0 };
     }
 
     const videoIds = snippets.map((s) => s.resourceId.videoId);
