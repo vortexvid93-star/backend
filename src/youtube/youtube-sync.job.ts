@@ -15,7 +15,7 @@ export class YoutubeSyncJob {
     this.logger.log('Début synchronisation YouTube');
     const result = await this.youtubeService.syncAllChannels();
     this.logger.log(
-      `Sync terminée — chaînes: ${result.chaines_traitees}, vidéos: ${result.videos_upserted}, erreurs: ${result.erreurs}`,
+      `Sync terminée — chaînes: ${result.chaines_traitees}, vidéos: ${result.videos_upserted}, archivées: ${result.videos_archived}, erreurs: ${result.erreurs}`,
     );
     return result;
   }

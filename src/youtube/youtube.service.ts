@@ -151,17 +151,23 @@ export class YoutubeService {
 
   // ─── Synchronisation ────────────────────────────────────────────────────────
 
-  async syncChannel(chaineId: string): Promise<{ upserted: number; skipped: number }> {
+  private get maxVideoAgeMonths(): number {
+    return this.config.get<number>('YOUTUBE_MAX_VIDEO_AGE_MONTHS') ?? 18;
+  }
+
+  async syncChannel(chaineId: string): Promise<{ upserted: number; skipped: number; archived: number }> {
     const chaine = await this.prisma.chaineYoutube.findUnique({
       where: { id: chaineId },
     });
-    if (!chaine || !chaine.actif) return { upserted: 0, skipped: 0 };
+    if (!chaine || !chaine.actif) return { upserted: 0, skipped: 0, archived: 0 };
+
+    // Première sync : limiter à maxVideoAgeMonths pour éviter l'import de tout l'historique
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - this.maxVideoAgeMonths);
+    const publishedAfter = chaine.last_synced_at ?? cutoffDate;
 
     const uploadsId = await this.getUploadsPlaylistId(chaine.channel_id);
-    const snippets = await this.fetchPlaylistItems(
-      uploadsId,
-      chaine.last_synced_at ?? undefined,
-    );
+    const snippets = await this.fetchPlaylistItems(uploadsId, publishedAfter);
 
     if (snippets.length === 0) {
       await this.prisma.chaineYoutube.update({
@@ -209,17 +215,28 @@ export class YoutubeService {
       upserted++;
     }
 
+    // Archiver les vidéos trop anciennes (désactiver sans supprimer)
+    const { count: archived } = await this.prisma.videoEducative.updateMany({
+      where: {
+        chaine_id: chaineId,
+        actif: true,
+        published_at: { lt: cutoffDate },
+      },
+      data: { actif: false },
+    });
+
     await this.prisma.chaineYoutube.update({
       where: { id: chaineId },
       data: { last_synced_at: new Date() },
     });
 
-    return { upserted, skipped };
+    return { upserted, skipped, archived };
   }
 
   async syncAllChannels(): Promise<{
     chaines_traitees: number;
     videos_upserted: number;
+    videos_archived: number;
     erreurs: number;
   }> {
     const chaines = await this.prisma.chaineYoutube.findMany({
@@ -228,12 +245,14 @@ export class YoutubeService {
     });
 
     let videosUpserted = 0;
+    let videosArchived = 0;
     let erreurs = 0;
 
     for (const { id } of chaines) {
       try {
-        const { upserted } = await this.syncChannel(id);
+        const { upserted, archived } = await this.syncChannel(id);
         videosUpserted += upserted;
+        videosArchived += archived;
       } catch (err) {
         erreurs++;
         this.logger.warn(`syncChannel échoué pour ${id}: ${String(err)}`);
@@ -243,6 +262,7 @@ export class YoutubeService {
     return {
       chaines_traitees: chaines.length,
       videos_upserted: videosUpserted,
+      videos_archived: videosArchived,
       erreurs,
     };
   }
