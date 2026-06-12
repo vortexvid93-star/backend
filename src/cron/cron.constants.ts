@@ -5,6 +5,7 @@ export const CRON_JOB_NAMES = {
   GENERATE_RECOMMENDATIONS: 'generate-recommendations',
   CLEANUP_OTP: 'cleanup-otp',
   CLOSE_EXPIRED_CHALLENGES: 'close-expired-challenges',
+  YOUTUBE_SYNC: 'youtube-sync',
 } as const;
 
 export type CronJobName =

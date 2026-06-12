@@ -14,6 +14,7 @@ import { ChallengesModule } from './challenges/challenges.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { AdminModule } from './admin/admin.module';
 import { CronModule } from './cron/cron.module';
+import { YoutubeModule } from './youtube/youtube.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CronModule } from './cron/cron.module';
     DiscoveryModule,
     AdminModule,
     CronModule,
+    YoutubeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

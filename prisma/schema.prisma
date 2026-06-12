@@ -548,6 +548,46 @@ model Recommandation {
   @@map("recommandation")
 }
 
+// ─── Vidéos éducatives YouTube ───────────────────────────────────────────────
+
+model ChaineYoutube {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel_id     String    @unique @db.VarChar(50)
+  nom            String    @db.VarChar(200)
+  description    String?
+  thumbnail_url  String?   @db.VarChar(500)
+  actif          Boolean   @default(true)
+  last_synced_at DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+
+  videos VideoEducative[]
+
+  @@map("chaineYoutube")
+}
+
+model VideoEducative {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  video_id       String   @unique @db.VarChar(20)
+  chaine_id      String   @db.Uuid
+  titre          String   @db.VarChar(500)
+  description    String?
+  thumbnail_url  String?  @db.VarChar(500)
+  published_at   DateTime
+  duree_secondes Int?
+  tags           String[]
+  view_count     BigInt   @default(0)
+  actif          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  chaine ChaineYoutube @relation(fields: [chaine_id], references: [id], onDelete: Cascade)
+
+  @@index([chaine_id])
+  @@index([published_at(sort: Desc)])
+  @@map("videoEducative")
+}
+
 // ─── Tables d'association ────────────────────────────────────────────────────
 
 model Appartenir {
