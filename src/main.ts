@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { setupSwagger } from './common/swagger/setup-swagger';
 
 const DEFAULT_DEV_ORIGINS = [
@@ -50,6 +51,7 @@ async function bootstrap() {
     exposedHeaders: ['Location'],
   });
 
+  app.useGlobalFilters(new GlobalHttpExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

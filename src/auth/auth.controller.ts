@@ -21,6 +21,7 @@ import {
   AuthPasswordLoginDocs,
   AuthPasswordResetConfirmDocs,
   AuthPasswordResetRequestDocs,
+  AuthPasswordResetVerifyDocs,
   AuthRefreshDocs,
   AuthRegisterDocs,
   AuthRegisterPasswordDocs,
@@ -131,6 +132,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   requestPasswordReset(@Body() dto: EmailDto) {
     return this.authService.requestPasswordReset(dto);
+  }
+
+  @Post('password/reset/verify')
+  @AuthPasswordResetVerifyDocs()
+  @HttpCode(HttpStatus.OK)
+  verifyPasswordResetOtp(@Body() dto: OtpVerifyDto) {
+    return this.authService.verifyPasswordResetOtp(dto);
   }
 
   @Post('password/reset/confirm')

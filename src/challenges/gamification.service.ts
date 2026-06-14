@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   StatutDefi,
   StatutUserDefi,
+  AuthStatut,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesEngineService } from './challenges-engine.service';
@@ -16,6 +17,63 @@ export class GamificationService {
     private readonly prisma: PrismaService,
     private readonly engine: ChallengesEngineService,
   ) {}
+
+  async getLeaderboard(authId: string, limit = 50) {
+    const rows = await this.prisma.auth.findMany({
+      where: {
+        statut: AuthStatut.ACTIF,
+        personne: { deleted_at: null },
+      },
+      include: {
+        personne: {
+          select: {
+            nom: true,
+            prenom: true,
+            points: true,
+            photo_profil_url: true,
+          },
+        },
+      },
+      orderBy: { personne: { points: 'desc' } },
+      take: Math.min(limit, 100),
+    });
+
+    const data = rows.map((row, index) => ({
+      rank: index + 1,
+      auth_id: row.id,
+      nom: row.personne.nom,
+      prenom: row.personne.prenom,
+      points: row.personne.points,
+      photo_profil_url: row.personne.photo_profil_url,
+      is_current_user: row.id === authId,
+    }));
+
+    const current = data.find((r) => r.is_current_user);
+    let current_user_rank: number | null = current?.rank ?? null;
+
+    if (!current) {
+      const me = await this.prisma.auth.findUnique({
+        where: { id: authId },
+        include: { personne: { select: { points: true } } },
+      });
+      if (me?.personne) {
+        const ahead = await this.prisma.personne.count({
+          where: {
+            deleted_at: null,
+            points: { gt: me.personne.points },
+            auth: { statut: AuthStatut.ACTIF },
+          },
+        });
+        current_user_rank = ahead + 1;
+      }
+    }
+
+    return {
+      data,
+      current_user_rank,
+      current_user_points: current?.points ?? null,
+    };
+  }
 
   async getOverview(authId: string) {
     await this.engine.syncExpiredParticipations(authId);

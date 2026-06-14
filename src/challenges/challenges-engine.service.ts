@@ -22,7 +22,7 @@ type DefiRow = {
   categorie_id: string | null;
   livre_id: string | null;
   auteur_id: string | null;
-  badge: { id: string; nom: string };
+  badge: { id: string; nom: string; points?: number };
 };
 
 type BookContext = {
@@ -203,11 +203,30 @@ export class ChallengesEngineService {
     authId: string,
     defi: DefiRow,
   ): Promise<void> {
+    const auth = await tx.auth.findUnique({
+      where: { id: authId },
+      select: { personne_id: true },
+    });
+    if (!auth) return;
+
+    const badge = await tx.badge.findUnique({
+      where: { id: defi.badge_id },
+      select: { points: true, nom: true },
+    });
+
+    const xpGain = defi.points_bonus + (badge?.points ?? 0);
+    if (xpGain > 0) {
+      await tx.personne.update({
+        where: { id: auth.personne_id },
+        data: { points: { increment: xpGain } },
+      });
+    }
+
     await tx.notification.create({
       data: {
         auth_id: authId,
         titre: 'Défi relevé !',
-        contenu: `Vous avez terminé le défi « ${defi.titre} » (+${defi.points_bonus} pts bonus).`,
+        contenu: `Vous avez terminé le défi « ${defi.titre} » (+${xpGain} pts).`,
         type: TypeNotification.DEFI,
       },
     });

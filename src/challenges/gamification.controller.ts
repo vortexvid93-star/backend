@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SWAGGER_TAGS } from '../common/swagger/constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -22,5 +22,15 @@ export class GamificationController {
   @HttpCode(HttpStatus.OK)
   getOverview(@CurrentUser() user: JwtPayload) {
     return this.gamificationService.getOverview(user.sub);
+  }
+
+  @Get('leaderboard')
+  @HttpCode(HttpStatus.OK)
+  getLeaderboard(
+    @CurrentUser() user: JwtPayload,
+    @Query('limit') limit?: string,
+  ) {
+    const parsed = limit ? Math.min(parseInt(limit, 10) || 50, 100) : 50;
+    return this.gamificationService.getLeaderboard(user.sub, parsed);
   }
 }

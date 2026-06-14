@@ -40,6 +40,7 @@ function normalizeEmail(email: string): string {
 export class AuthService {
   private readonly googleClient: OAuth2Client;
   private readonly googleClientId: string;
+  private readonly googleAudiences: string[];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -49,6 +50,13 @@ export class AuthService {
     config: ConfigService,
   ) {
     this.googleClientId = config.getOrThrow<string>('GOOGLE_CLIENT_ID');
+    const extra = [
+      config.get<string>('GOOGLE_ANDROID_CLIENT_ID'),
+      config.get<string>('GOOGLE_IOS_CLIENT_ID'),
+    ]
+      .map((v) => v?.trim())
+      .filter(Boolean) as string[];
+    this.googleAudiences = [...new Set([this.googleClientId, ...extra])];
     this.googleClient = new OAuth2Client(this.googleClientId);
   }
 
@@ -67,9 +75,12 @@ export class AuthService {
       dto.password,
       AUTH_CONSTANTS.BCRYPT_ROUNDS,
     );
-    const auth = await this.createLocalAccount({ ...dto, email }, passwordHash);
-    await this.otp.createAndSendOtp(auth.id, email, OtpType.LOGIN, 'login');
-    return { message: 'OTP envoyé. Valide 10 minutes.' };
+    const auth = await this.createActiveLocalAccount(
+      { ...dto, email },
+      passwordHash,
+    );
+    const tokens = await this.tokens.issueTokens(auth);
+    return { ...tokens, isNewUser: true };
   }
 
   async requestOtp(dto: EmailDto) {
@@ -307,7 +318,7 @@ export class AuthService {
     if (auth.statut === AuthStatut.BANNI) {
       throw new ForbiddenException('Compte suspendu.');
     }
-    if (auth.statut === AuthStatut.PENDING) {
+    if (auth.statut === AuthStatut.PENDING && !auth.mot_de_passe_hash) {
       throw new ForbiddenException(
         "Validez d'abord votre email via OTP.",
       );
@@ -316,6 +327,14 @@ export class AuthService {
     const valid = await compare(dto.password, auth.mot_de_passe_hash);
     if (!valid) {
       throw new BadRequestException(GENERIC_LOGIN_ERROR);
+    }
+
+    if (auth.statut === AuthStatut.PENDING) {
+      await this.prisma.auth.update({
+        where: { id: auth.id },
+        data: { statut: AuthStatut.ACTIF, email_verified: true },
+      });
+      auth.statut = AuthStatut.ACTIF;
     }
 
     const tokens = await this.tokens.issueTokens(auth);
@@ -336,6 +355,28 @@ export class AuthService {
       );
     }
     return { message: 'Instructions envoyées si le compte existe.' };
+  }
+
+  async verifyPasswordResetOtp(dto: OtpVerifyDto) {
+    const email = normalizeEmail(dto.email);
+    const auth = await this.prisma.auth.findUnique({
+      where: { email },
+    });
+    if (!auth) {
+      throw new NotFoundException('Email inconnu.');
+    }
+    if (auth.statut === AuthStatut.BANNI) {
+      throw new ForbiddenException('Compte suspendu.');
+    }
+
+    await this.otp.verifyOtp(
+      auth.id,
+      email,
+      dto.code,
+      OtpType.RESET_PASSWORD,
+    );
+
+    return { message: 'Code valide.', valid: true };
   }
 
   async confirmPasswordReset(dto: PasswordResetConfirmDto) {
@@ -434,19 +475,45 @@ export class AuthService {
     });
   }
 
-  private async verifyGoogleToken(idToken: string): Promise<TokenPayload> {
-    try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken,
-        audience: this.googleClientId,
+  /** Inscription email + mot de passe — compte actif immédiatement (pas d’OTP). */
+  private async createActiveLocalAccount(
+    dto: RegisterDto,
+    passwordHash: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const personne = await tx.personne.create({
+        data: { nom: dto.nom.trim(), prenom: dto.prenom.trim() },
       });
-      const payload = ticket.getPayload();
-      if (!payload) {
-        throw new BadRequestException('id_token invalide ou expiré.');
+      const auth = await tx.auth.create({
+        data: {
+          personne_id: personne.id,
+          email: dto.email,
+          mot_de_passe_hash: passwordHash,
+          auth_provider: AuthProvider.LOCAL,
+          statut: AuthStatut.ACTIF,
+          email_verified: true,
+        },
+      });
+      return tx.auth.findUniqueOrThrow({
+        where: { id: auth.id },
+        include: { personne: true },
+      });
+    });
+  }
+
+  private async verifyGoogleToken(idToken: string): Promise<TokenPayload> {
+    for (const audience of this.googleAudiences) {
+      try {
+        const ticket = await this.googleClient.verifyIdToken({
+          idToken,
+          audience,
+        });
+        const payload = ticket.getPayload();
+        if (payload) return payload;
+      } catch {
+        // Essayer le client ID suivant (Web vs Android)
       }
-      return payload;
-    } catch {
-      throw new BadRequestException('id_token invalide ou expiré.');
     }
+    throw new BadRequestException('id_token invalide ou expiré.');
   }
 }

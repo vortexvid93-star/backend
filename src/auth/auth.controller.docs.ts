@@ -34,11 +34,11 @@ export const AuthRegisterPasswordDocs = () =>
     ApiOperation({
       summary: 'Inscription par email + mot de passe',
       description:
-        'Même flux que l’inscription OTP, mais enregistre aussi un mot de passe (8–128 caractères). ' +
-        'L’activation du compte passe toujours par la validation OTP. ' +
-        '**Frontend** : alternative à l’inscription pure OTP si vous proposez un champ mot de passe dès l’inscription.',
+        'Crée un compte **ACTIF** avec mot de passe (8–128 caractères) et renvoie immédiatement `access_token`, `refresh_token` et `user`. ' +
+        'Aucun OTP requis à l’inscription — l’OTP est réservé à la réinitialisation du mot de passe. ' +
+        '**Frontend** : écran inscription → stocker les tokens → accueil ou onboarding.',
     }),
-    ApiCreatedResponse({ type: MessageResponseSchema }),
+    ApiCreatedResponse({ type: AuthTokensWithNewUserSchema }),
     ApiConflictResponse({ description: 'Email déjà utilisé.' }),
   );
 
@@ -148,6 +148,18 @@ export const AuthPasswordResetRequestDocs = () =>
         'Envoie un OTP de type reset par email. Ne révèle pas si l’email existe (sauf cas métier actuel : email inconnu → 404).',
     }),
     ApiOkResponse({ type: MessageResponseSchema }),
+    ApiNotFoundResponse({ description: 'Email inconnu.' }),
+  );
+
+export const AuthPasswordResetVerifyDocs = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Vérifier le code OTP de réinitialisation',
+      description:
+        'Contrôle que le code saisi correspond à celui envoyé par email, sans encore changer le mot de passe.',
+    }),
+    ApiOkResponse({ type: MessageResponseSchema }),
+    ApiBadRequestResponse({ description: 'Code OTP incorrect ou expiré.' }),
     ApiNotFoundResponse({ description: 'Email inconnu.' }),
   );
 
