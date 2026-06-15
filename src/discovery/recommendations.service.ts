@@ -7,6 +7,7 @@ import {
 import {
   RaisonRecommandation,
   StatutLivre,
+  StatutProgression,
 } from '../../generated/prisma/enums';
 import type { Prisma } from '../../generated/prisma/client';
 import { BOOK_LIST_INCLUDE } from '../books/books-query.builder';
@@ -42,7 +43,8 @@ export class RecommendationsService {
       livre: {
         statut: StatutLivre.PUBLIE,
         ...(typeLivre ? { type_livre: typeLivre } : {}),
-        progressions: { none: { auth_id: authId } },
+        // N'exclut que les livres terminés — les livres en cours restent recommandables
+        progressions: { none: { auth_id: authId, statut: StatutProgression.TERMINE } },
       },
     };
   }
@@ -144,10 +146,59 @@ export class RecommendationsService {
       this.engine.buildContext(authId),
     ]);
 
-    return {
-      data: rows.map((row) => mapRecommandation(row, ctx)),
-      limit,
-    };
+    const picks = rows.map((row) => mapRecommandation(row, ctx));
+
+    // Fallback : si le pool de recommandations est insuffisant, compléter avec des livres populaires
+    if (picks.length < limit) {
+      const alreadyShownIds = new Set(picks.map((p) => p.livre.id));
+      type FallbackLivre = Awaited<ReturnType<typeof this.prisma.livre.findFirst>> & {
+        livre_auteurs: { auteur: { id: string; nom: string; prenom: string; deleted_at: Date | null } }[];
+        appartenir: { categorie: { id: string; nom: string; deleted_at: Date | null } }[];
+        statistique: { note_moyenne: number | null; nb_lectures: number } | null;
+      };
+
+      const fallbackBooks = await this.prisma.livre.findMany({
+        where: {
+          statut: StatutLivre.PUBLIE,
+          id: { notIn: [...alreadyShownIds] },
+          progressions: { none: { auth_id: authId, statut: StatutProgression.TERMINE } },
+        },
+        include: BOOK_LIST_INCLUDE,
+        orderBy: [
+          { statistique: { nb_lectures: 'desc' } },
+          { createdAt: 'desc' },
+        ],
+        take: limit - picks.length,
+      }) as unknown as FallbackLivre[];
+
+      for (const livre of fallbackBooks) {
+        picks.push({
+          id: `catalogue-${livre.id}`,
+          livre: {
+            id: livre.id,
+            titre: livre.titre,
+            couverture_url: livre.couverture_url,
+            type_livre: livre.type_livre,
+            note_moyenne: livre.statistique?.note_moyenne ?? null,
+            nb_lectures: livre.statistique?.nb_lectures ?? 0,
+            auteurs: livre.livre_auteurs
+              .filter((la) => !la.auteur.deleted_at)
+              .map((la) => ({ id: la.auteur.id, nom: la.auteur.nom, prenom: la.auteur.prenom })),
+            categories: livre.appartenir
+              .filter((a) => !a.categorie.deleted_at)
+              .map((a) => ({ id: a.categorie.id, nom: a.categorie.nom })),
+          },
+          score: 0,
+          raison: RaisonRecommandation.POPULAR,
+          raison_libelle: 'Populaire',
+          contexte: null,
+          vu: false,
+          clique: false,
+        });
+      }
+    }
+
+    return { data: picks, limit };
   }
 
   async getByReason(authId: string) {

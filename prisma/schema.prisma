@@ -161,6 +161,14 @@ model Personne {
   ecole            String?        @db.VarChar(200)
   niveau           String?        @db.VarChar(100)
   points           Int            @default(0)
+
+  // Gamification Duolingo-style
+  streak_actuel            Int       @default(0)
+  streak_max               Int       @default(0)
+  derniere_lecture_date    DateTime? @db.Date
+  objectif_minutes_jour    Int       @default(20)
+  minutes_lus_aujourd_hui  Int       @default(0)
+
   deleted_at       DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @default(now()) @updatedAt

@@ -315,6 +315,10 @@ export class ProfileService {
               couverture_url: true,
               type_livre: true,
               nombre_pages: true,
+              livre_auteurs: {
+                select: { auteur: { select: { nom: true, prenom: true } } },
+                take: 1,
+              },
             },
           },
         },

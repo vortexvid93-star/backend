@@ -1,10 +1,9 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { StatutCommentaire, TypeBibliotheque } from '../../generated/prisma/enums';
+import { StatutCommentaire } from '../../generated/prisma/enums';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { BooksCatalogService } from './books-catalog.service';
@@ -54,7 +53,6 @@ export class BooksSocialService {
   async createComment(authId: string, livreId: string, dto: CreateCommentDto) {
     await assertActiveSubscription(this.prisma, authId);
     await this.catalog.findPublishedBook(livreId);
-    await this.assertBookInInterneLibrary(livreId);
 
     const comment = await this.prisma.commentaire.create({
       data: {
@@ -122,7 +120,6 @@ export class BooksSocialService {
   async rateBook(authId: string, livreId: string, dto: RateBookDto) {
     await assertActiveSubscription(this.prisma, authId);
     await this.catalog.findPublishedBook(livreId);
-    await this.assertBookInInterneLibrary(livreId);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.noter.upsert({
@@ -192,18 +189,4 @@ export class BooksSocialService {
     return comment;
   }
 
-  private async assertBookInInterneLibrary(livreId: string) {
-    const link = await this.prisma.appartient.findFirst({
-      where: {
-        livre_id: livreId,
-        bibliotheque: { type: TypeBibliotheque.INTERNE },
-      },
-    });
-
-    if (!link) {
-      throw new BadRequestException(
-        'Commentaires et notes réservés aux livres des bibliothèques internes.',
-      );
-    }
-  }
 }

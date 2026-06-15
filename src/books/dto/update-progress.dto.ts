@@ -14,4 +14,11 @@ export class UpdateProgressDto {
   @IsInt()
   @Min(0)
   duree_lecture_min?: number;
+
+  /** Nombre total de pages connu côté client — utilisé quand le livre n'a pas nombre_pages en base. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  nombre_pages_hint?: number;
 }

@@ -8,6 +8,7 @@ import { ChallengesEngineService } from './challenges-engine.service';
 import { ChallengesService } from './challenges.service';
 import { GamificationController } from './gamification.controller';
 import { GamificationService } from './gamification.service';
+import { StreakService } from './streak.service';
 
 @Module({
   imports: [AuthModule],
@@ -21,8 +22,9 @@ import { GamificationService } from './gamification.service';
     ChallengesService,
     BadgesService,
     GamificationService,
+    StreakService,
     JwtAuthGuard,
   ],
-  exports: [ChallengesEngineService, ChallengesService],
+  exports: [ChallengesEngineService, ChallengesService, StreakService],
 })
 export class ChallengesModule {}

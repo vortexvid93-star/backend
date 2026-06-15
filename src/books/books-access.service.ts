@@ -155,15 +155,18 @@ export class BooksAccessService {
       });
 
       if (typeAcces === TypeAccesToken.LECTURE && !existingProgression) {
-        progressionCreee = true;
-        await tx.progressionLecture.create({
-          data: {
+        // createMany + skipDuplicates génère INSERT … ON CONFLICT DO NOTHING (atomique)
+        // Résiste aux appels simultanés sans lever d'exception de contrainte unique
+        const created = await tx.progressionLecture.createMany({
+          data: [{
             auth_id: authId,
             livre_id: livreId,
             page_actuelle: 0,
             statut: StatutProgression.EN_COURS,
-          },
+          }],
+          skipDuplicates: true,
         });
+        progressionCreee = created.count > 0;
 
         await tx.statistiqueLivre.upsert({
           where: { livre_id: livreId },

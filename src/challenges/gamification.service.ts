@@ -6,6 +6,7 @@ import {
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChallengesEngineService } from './challenges-engine.service';
+import { StreakService } from './streak.service';
 import {
   computeDaysRemaining,
   computeProgressPercent,
@@ -16,6 +17,7 @@ export class GamificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: ChallengesEngineService,
+    private readonly streakService: StreakService,
   ) {}
 
   async getLeaderboard(authId: string, limit = 50) {
@@ -73,6 +75,10 @@ export class GamificationService {
       current_user_rank,
       current_user_points: current?.points ?? null,
     };
+  }
+
+  async setDailyGoal(authId: string, minutes: number): Promise<void> {
+    await this.streakService.setDailyGoal(authId, minutes);
   }
 
   async getOverview(authId: string) {
@@ -148,6 +154,8 @@ export class GamificationService {
       0,
     );
 
+    const dailyStats = await this.streakService.getDailyStats(authId);
+
     return {
       badges: {
         obtenus: badgesObtenus,
@@ -196,6 +204,23 @@ export class GamificationService {
             ),
           }
         : null,
+      streak: {
+        actuel: dailyStats.streak_actuel,
+        max: dailyStats.streak_max,
+      },
+      objectif_jour: {
+        minutes_cible: dailyStats.objectif_minutes_jour,
+        minutes_lus: dailyStats.minutes_lus_aujourd_hui,
+        atteint: dailyStats.objectif_atteint,
+        pourcentage: Math.min(
+          100,
+          Math.round(
+            (dailyStats.minutes_lus_aujourd_hui /
+              Math.max(1, dailyStats.objectif_minutes_jour)) *
+              100,
+          ),
+        ),
+      },
     };
   }
 }

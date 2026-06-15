@@ -89,9 +89,14 @@ export function mapReadingItem(
       couverture_url: string | null;
       type_livre: string;
       nombre_pages: number | null;
+      livre_auteurs: { auteur: { nom: string; prenom: string | null } }[];
     };
   },
 ) {
+  const firstAuteur = row.livre.livre_auteurs[0]?.auteur;
+  const auteur = firstAuteur
+    ? `${firstAuteur.prenom ?? ''} ${firstAuteur.nom}`.trim()
+    : null;
   return {
     progression_id: row.id,
     livre: {
@@ -100,6 +105,7 @@ export function mapReadingItem(
       couverture_url: row.livre.couverture_url,
       type_livre: row.livre.type_livre,
       nombre_pages: row.livre.nombre_pages,
+      auteur,
     },
     page_actuelle: row.page_actuelle,
     pourcentage: row.pourcentage,

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { StatutProgression } from '../../generated/prisma/enums';
 import { ChallengesEngineService } from '../challenges/challenges-engine.service';
+import { StreakService } from '../challenges/streak.service';
 import { RecommendationsEngineService } from '../discovery/recommendations-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BOOKS_CONSTANTS } from './books.constants';
@@ -19,6 +20,7 @@ export class BooksProgressService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly challengesEngine: ChallengesEngineService,
+    private readonly streakService: StreakService,
     private readonly recommendationsEngine: RecommendationsEngineService,
   ) {}
 
@@ -50,13 +52,14 @@ export class BooksProgressService {
       );
     }
 
-    if (dto.page_actuelle <= progression.page_actuelle) {
+    if (dto.page_actuelle < progression.page_actuelle) {
       throw new BadRequestException(
-        'page_actuelle doit être supérieure à la page courante.',
+        'page_actuelle ne peut pas être inférieure à la page courante.',
       );
     }
 
-    const nombrePages = progression.livre.nombre_pages;
+    // Utilise le nombre de pages du livre ; si absent, accepte l'indication du client (lecteur PDF)
+    const nombrePages = progression.livre.nombre_pages ?? dto.nombre_pages_hint ?? null;
     const pageDemandee = dto.page_actuelle;
     const { pageCible, ajustee } = this.validatePageActuelle(
       pageDemandee,
@@ -116,6 +119,11 @@ export class BooksProgressService {
 
       return row;
     });
+
+    // Mise à jour streak + objectif quotidien (fire-and-forget, hors transaction)
+    if (dto.duree_lecture_min && dto.duree_lecture_min > 0) {
+      void this.streakService.updateAfterReading(authId, dto.duree_lecture_min);
+    }
 
     const base = mapProgressionUpdate(updated);
     if (!ajustee) return base;
