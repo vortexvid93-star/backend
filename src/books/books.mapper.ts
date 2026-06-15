@@ -57,8 +57,22 @@ export function mapLivreCatalogItem(livre: LivreCatalogRow) {
 
 /** Liste livres d'une bibliothèque (spec §3.3 — sans nb_lectures_7j). */
 export function mapLivreLibraryItem(livre: LivreCatalogRow) {
-  const { nb_lectures_7j: _ignored, ...item } = mapLivreCatalogItem(livre);
-  return item;
+  return {
+    id: livre.id,
+    titre: livre.titre,
+    isbn: livre.isbn,
+    resume: livre.resume,
+    couverture_url: livre.couverture_url,
+    type_livre: livre.type_livre,
+    is_downloadable: livre.is_downloadable,
+    langue: livre.langue,
+    annee_publication: livre.annee_publication,
+    nombre_pages: livre.nombre_pages,
+    auteurs: mapAuteursCatalog(livre.livre_auteurs),
+    categories: mapCategories(livre.appartenir),
+    note_moyenne: livre.statistique?.note_moyenne ?? null,
+    nb_lectures: livre.statistique?.nb_lectures ?? 0,
+  };
 }
 
 export function mapMaProgressionBrief(

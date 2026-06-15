@@ -34,7 +34,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       this.logger.error('Erreur inconnue', String(exception));
     }
 
-    if (status >= 500) {
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       const text = Array.isArray(message)
         ? message.join(' ')
         : String(message ?? '');

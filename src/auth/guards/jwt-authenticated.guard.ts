@@ -24,7 +24,7 @@ export class JwtAuthenticatedGuard extends AuthGuard('jwt') {
     const request = context.switchToHttp().getRequest<{ user: JwtPayload }>();
     const user = request.user;
 
-    if (await this.cache.isJtiBlacklisted(user.jti)) {
+    if (this.cache.isJtiBlacklisted(user.jti)) {
       throw new UnauthorizedException('Token révoqué.');
     }
 

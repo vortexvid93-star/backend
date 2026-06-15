@@ -129,7 +129,6 @@ export class RecommendationsEngineService {
           ...(await this.collectGenreCandidates(
             excluded,
             new Set(source.categorieIds),
-            ctx,
           )),
           ...(await this.collectAuthorCandidates(
             excluded,
@@ -189,7 +188,7 @@ export class RecommendationsEngineService {
     const autIds = new Set(livre.livre_auteurs.map((a) => a.auteur_id));
 
     let candidates = this.mergeCandidates([
-      ...(await this.collectGenreCandidates(excluded, catIds, ctx)),
+      ...(await this.collectGenreCandidates(excluded, catIds)),
       ...(await this.collectAuthorCandidates(excluded, autIds, ctx)),
     ]);
 
@@ -239,7 +238,7 @@ export class RecommendationsEngineService {
     const authorIds = new Set(ctx.finishedBooks.flatMap((b) => b.auteurIds));
 
     return [
-      ...(await this.collectGenreCandidates(excluded, genreIds, ctx)),
+      ...(await this.collectGenreCandidates(excluded, genreIds)),
       ...(await this.collectAuthorCandidates(excluded, authorIds, ctx)),
       ...(await this.collectPopularCandidates(excluded)),
       ...(await this.collectTrendingCandidates(excluded)),
@@ -249,7 +248,6 @@ export class RecommendationsEngineService {
   private async collectGenreCandidates(
     excluded: Set<string>,
     categorieIds: Set<string>,
-    _ctx: RecommendationContext,
   ): Promise<ScoredCandidate[]> {
     if (categorieIds.size === 0) return [];
 

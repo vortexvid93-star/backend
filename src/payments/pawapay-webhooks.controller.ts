@@ -41,11 +41,10 @@ export class PawaPayWebhooksController {
   @Post('deposits')
   @HttpCode(HttpStatus.OK)
   depositCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
-    const status = String(body.status ?? '?');
-    const depositId = String(body.depositId ?? '?');
-    const clientRef = String(body.clientReferenceId ?? '?');
+    const s = (k: string) =>
+      String((body[k] as string | number | null | undefined) ?? '?');
     this.logger.log(
-      `Callback dépôt REÇU status=${status} depositId=${depositId} clientReferenceId=${clientRef}`,
+      `Callback dépôt REÇU status=${s('status')} depositId=${s('depositId')} clientReferenceId=${s('clientReferenceId')}`,
     );
 
     res.status(HttpStatus.OK).send();
@@ -56,8 +55,10 @@ export class PawaPayWebhooksController {
   @HttpCode(HttpStatus.OK)
   payoutCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
     res.status(HttpStatus.OK).send();
+    const s = (k: string) =>
+      String((body[k] as string | number | null | undefined) ?? '?');
     this.logger.debug(
-      `Callback payout (ignoré métier) status=${String(body.status ?? '?')} payoutId=${String(body.payoutId ?? '?')}`,
+      `Callback payout (ignoré métier) status=${s('status')} payoutId=${s('payoutId')}`,
     );
   }
 
@@ -65,8 +66,10 @@ export class PawaPayWebhooksController {
   @HttpCode(HttpStatus.OK)
   refundCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
     res.status(HttpStatus.OK).send();
+    const s = (k: string) =>
+      String((body[k] as string | number | null | undefined) ?? '?');
     this.logger.debug(
-      `Callback refund (ignoré métier) status=${String(body.status ?? '?')} refundId=${String(body.refundId ?? '?')}`,
+      `Callback refund (ignoré métier) status=${s('status')} refundId=${s('refundId')}`,
     );
   }
 

@@ -423,7 +423,7 @@ export class AuthService {
   async logout(jti: string, refreshToken: string) {
     await this.tokens.revokeRefreshToken(refreshToken);
     if (jti) {
-      await this.cache.blacklistJti(jti);
+      this.cache.blacklistJti(jti);
     }
     return { message: 'Déconnexion réussie.' };
   }

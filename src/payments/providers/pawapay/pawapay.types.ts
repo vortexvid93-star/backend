@@ -38,6 +38,6 @@ export interface PawaPayDepositCallback {
 }
 
 export interface PawaPayCheckDepositResponse {
-  status: 'FOUND' | 'NOT_FOUND' | string;
+  status: 'FOUND' | 'NOT_FOUND' | (string & {});
   data?: PawaPayDepositCallback;
 }

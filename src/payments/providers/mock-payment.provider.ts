@@ -28,27 +28,24 @@ export class MockPaymentProvider implements PaymentProvider {
     }
   }
 
-  async initPayment(input: PaymentInitInput): Promise<PaymentInitResult> {
+  initPayment(input: PaymentInitInput): Promise<PaymentInitResult> {
     const devise = toProviderCurrency(input.devise_stockee);
     const montant = toProviderAmount(input.montant);
     const payment_url =
       `${input.return_url.split('?')[0]}?transaction_id=${encodeURIComponent(input.ref_transaction)}` +
       `&_mock=1&_devise_api=${devise}&_montant_api=${montant}`;
 
-    return { payment_url };
+    return Promise.resolve({ payment_url });
   }
 
-  async verifyPayment(
-    ref_transaction: string,
-    _context?: { stored_operateur?: string | null },
-  ): Promise<PaymentVerifyResult> {
+  verifyPayment(ref_transaction: string): Promise<PaymentVerifyResult> {
     const status = this.outcomes.get(ref_transaction) ?? 'PENDING';
     const details = this.meta.get(ref_transaction);
 
-    return {
+    return Promise.resolve({
       status,
       operateur: details?.operateur,
       numero_telephone: details?.numero_telephone,
-    };
+    });
   }
 }

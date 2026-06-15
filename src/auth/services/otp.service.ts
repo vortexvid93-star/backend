@@ -48,8 +48,8 @@ export class OtpService {
     }
   }
 
-  async assertVerificationRateLimit(email: string): Promise<void> {
-    const count = await this.cache.incrementOtpVerifyAttempts(email);
+  assertVerificationRateLimit(email: string): void {
+    const count = this.cache.incrementOtpVerifyAttempts(email);
     if (count > AUTH_CONSTANTS.OTP_VERIFY_MAX) {
       throw new HttpException(
         'Trop de tentatives. Réessayez dans quelques minutes.',
@@ -98,7 +98,7 @@ export class OtpService {
     code: string,
     type: OtpType,
   ): Promise<{ otpId: string }> {
-    await this.assertVerificationRateLimit(email);
+    this.assertVerificationRateLimit(email);
 
     const otp = await this.prisma.otp.findFirst({
       where: {

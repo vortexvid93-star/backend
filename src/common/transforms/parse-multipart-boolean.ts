@@ -6,7 +6,9 @@ export function parseMultipartBoolean(value: unknown): boolean | undefined {
     return undefined;
   }
 
-  const raw = Array.isArray(value) ? value[value.length - 1] : value;
+  const raw = Array.isArray(value)
+    ? (value as unknown[])[value.length - 1]
+    : value;
 
   if (typeof raw === 'boolean') {
     return raw;

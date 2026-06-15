@@ -82,8 +82,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.googleLogin(dto);
-    res.status(result.statusCode);
-    const { statusCode: _, ...body } = result;
+    const { statusCode, ...body } = result;
+    res.status(statusCode);
     return body;
   }
 

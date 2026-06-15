@@ -169,7 +169,7 @@ export class AdminUsersService {
     });
 
     if (auth.jti) {
-      await this.cache.blacklistJti(auth.jti);
+      this.cache.blacklistJti(auth.jti);
     }
 
     return { id: updated.id, statut: updated.statut };

@@ -14,7 +14,7 @@ interface CacheEntry {
 export class AuthCacheService {
   private readonly store = new Map<string, CacheEntry>();
 
-  async blacklistJti(jti: string): Promise<void> {
+  blacklistJti(jti: string): void {
     this.set(
       `${AUTH_CONSTANTS.REDIS_JTI_PREFIX}${jti}`,
       '1',
@@ -22,11 +22,11 @@ export class AuthCacheService {
     );
   }
 
-  async isJtiBlacklisted(jti: string): Promise<boolean> {
+  isJtiBlacklisted(jti: string): boolean {
     return this.get(`${AUTH_CONSTANTS.REDIS_JTI_PREFIX}${jti}`) !== null;
   }
 
-  async incrementOtpVerifyAttempts(email: string): Promise<number> {
+  incrementOtpVerifyAttempts(email: string): number {
     const key = `otp:verify:${email}`;
     const current = this.get(key);
     const count = current ? parseInt(current, 10) + 1 : 1;

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthStatut, TypeNotification } from '../../../generated/prisma/enums';
+import { AuthStatut } from '../../../generated/prisma/enums';
 import { buildPaginationMeta } from '../../common/pagination.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { AdminNotificationsListQueryDto } from './dto/admin-notifications-list.dto';
