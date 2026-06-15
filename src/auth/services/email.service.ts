@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,7 +11,7 @@ import { Resend } from 'resend';
 type EmailProvider = 'smtp' | 'resend' | 'console';
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
   private readonly provider: EmailProvider;
   private readonly resend?: Resend;
@@ -55,6 +56,36 @@ export class EmailService {
         'EMAIL_PROVIDER non configuré — les codes OTP sont journalisés en console (dev uniquement).',
       );
     }
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (this.provider !== 'smtp' || !this.smtp) return;
+    try {
+      await this.smtp.verify();
+      this.logger.log('Connexion SMTP vérifiée avec succès.');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `Vérification SMTP échouée (${detail}). ` +
+          'Vérifiez SMTP_HOST, SMTP_USER, SMTP_PASSWORD et le pare-feu (port 587).',
+      );
+    }
+  }
+
+  /** État du transport e-mail (diagnostic ops). */
+  getProviderStatus(): {
+    provider: EmailProvider;
+    configured: boolean;
+    host?: string;
+  } {
+    return {
+      provider: this.provider,
+      configured: this.provider !== 'console',
+      host:
+        this.provider === 'smtp'
+          ? this.config.get<string>('SMTP_HOST')?.trim()
+          : undefined,
+    };
   }
 
   async sendOtpEmail(
@@ -141,14 +172,24 @@ export class EmailService {
   }
 
   private createSmtpTransport(): Transporter {
+    const port = Number(this.config.get<string>('SMTP_PORT') ?? 587);
+    const secure = this.config.get<string>('SMTP_SECURE') === 'true';
     return createTransport({
       host: this.config.get<string>('SMTP_HOST'),
-      port: Number(this.config.get<string>('SMTP_PORT') ?? 587),
-      secure: this.config.get<string>('SMTP_SECURE') === 'true',
+      port,
+      secure,
+      requireTLS: !secure && port === 587,
       auth: {
         user: this.config.get<string>('SMTP_USER')?.trim(),
         pass: this.stripEnvQuotes(this.config.get<string>('SMTP_PASSWORD')),
       },
+      tls: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized:
+          this.config.get<string>('SMTP_TLS_REJECT_UNAUTHORIZED') !== 'false',
+      },
+      connectionTimeout: 15_000,
+      greetingTimeout: 15_000,
     });
   }
 

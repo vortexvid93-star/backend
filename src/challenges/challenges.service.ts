@@ -13,6 +13,10 @@ import {
 import type { Prisma } from '../../generated/prisma/client';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  analyzeMission,
+  computeInitialMissionProgress,
+} from './challenges-mission-plan.util';
 import { ChallengesEngineService } from './challenges-engine.service';
 import {
   computeDaysRemaining,
@@ -274,6 +278,11 @@ export class ChallengesService {
       participation,
     );
 
+    const analyse_mission = analyzeMission(
+      defi,
+      participation?.progression ?? 0,
+    );
+
     return {
       defi_id: defi.id,
       titre: defi.titre,
@@ -292,6 +301,7 @@ export class ChallengesService {
         : null,
       pourcentage,
       prochaine_action,
+      analyse_mission,
       badge: {
         id: defi.badge.id,
         nom: defi.badge.nom,
@@ -389,6 +399,12 @@ export class ChallengesService {
 
     const defi = await this.prisma.defi.findUnique({
       where: { id: defiId },
+      include: {
+        badge: true,
+        categorie: true,
+        auteur: true,
+        livre: true,
+      },
     });
 
     if (!defi) {
@@ -409,19 +425,48 @@ export class ChallengesService {
       throw new ConflictException('Déjà inscrit à ce défi.');
     }
 
-    const participation = await this.prisma.userDefi.create({
-      data: {
-        auth_id: authId,
-        defi_id: defiId,
-        progression: 0,
-        statut: StatutUserDefi.EN_COURS,
-      },
+    const now = new Date();
+    const participation = await this.prisma.$transaction(async (tx) => {
+      const initialProgress = await computeInitialMissionProgress(
+        tx,
+        authId,
+        defi,
+      );
+      const isComplete = initialProgress >= defi.objectif_valeur;
+
+      const row = await tx.userDefi.create({
+        data: {
+          auth_id: authId,
+          defi_id: defiId,
+          progression: initialProgress,
+          statut: isComplete
+            ? StatutUserDefi.COMPLETE
+            : StatutUserDefi.EN_COURS,
+          ...(isComplete ? { date_completion: now } : {}),
+        },
+      });
+
+      if (isComplete) {
+        await this.engine.awardOnChallengeComplete(tx, authId, {
+          ...defi,
+          badge: defi.badge,
+        });
+      }
+
+      return row;
     });
+
+    const analyse_mission = analyzeMission(defi, participation.progression);
 
     return {
       defi_id: defiId,
       statut: participation.statut,
       progression: participation.progression,
+      analyse_mission,
+      message:
+        participation.statut === StatutUserDefi.COMPLETE
+          ? `Félicitations ! Vous avez déjà accompli « ${defi.titre} ».`
+          : 'Inscription au défi confirmée. Suivez votre plan de mission.',
     };
   }
 

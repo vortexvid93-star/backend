@@ -171,6 +171,8 @@ export class ChallengesEngineService {
   ): Promise<void> {
     const defi = row.defi;
     if (!isDefiCurrentlyActive(defi.date_debut, defi.date_fin, now)) return;
+    if (delta <= 0) return;
+    if (row.progression >= defi.objectif_valeur) return;
 
     const nextProgression = Math.min(
       row.progression + delta,
@@ -198,7 +200,8 @@ export class ChallengesEngineService {
     }
   }
 
-  private async awardOnChallengeComplete(
+  /** Attribue récompenses après complétion (appelé aussi à l'inscription si déjà accompli). */
+  async awardOnChallengeComplete(
     tx: Prisma.TransactionClient,
     authId: string,
     defi: DefiRow,
@@ -225,8 +228,8 @@ export class ChallengesEngineService {
     await tx.notification.create({
       data: {
         auth_id: authId,
-        titre: 'Défi relevé !',
-        contenu: `Vous avez terminé le défi « ${defi.titre} » (+${xpGain} pts).`,
+        titre: 'Félicitations ! Défi relevé',
+        contenu: `Bravo ! Vous avez terminé le défi « ${defi.titre} » et gagné ${xpGain} point(s). Continuez ainsi !`,
         type: TypeNotification.DEFI,
       },
     });

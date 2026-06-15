@@ -13,9 +13,14 @@ import {
   StatutUserDefi,
 } from '../../../generated/prisma/enums';
 import type { Prisma } from '../../../generated/prisma/client';
+import { Prisma as PrismaRuntime } from '../../../generated/prisma/client';
 import { AUTH_CONSTANTS } from '../../auth/auth.constants';
 import { AuthCacheService } from '../../auth/services/auth-cache.service';
 import { buildPaginationMeta } from '../../common/pagination.util';
+import {
+  findAuthByEmail,
+  normalizeEmail,
+} from '../../common/normalize-email.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { activeSubscriptionWhere } from '../../payments/subscription-query.util';
 import type { AdminUsersQueryDto } from './dto/admin-users-query.dto';
@@ -28,10 +33,6 @@ import {
   mapAdminUserDetailPersonne,
   mapAdminUserListItem,
 } from './users.mapper';
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
 
 @Injectable()
 export class AdminUsersService {
@@ -191,38 +192,48 @@ export class AdminUsersService {
 
   async createAdmin(dto: CreateAdminDto) {
     const email = normalizeEmail(dto.email);
-    const existing = await this.prisma.auth.findUnique({ where: { email } });
+    const existing = await findAuthByEmail(this.prisma, email);
     if (existing) {
       throw new ConflictException('Email déjà associé à un compte existant.');
     }
 
     const passwordHash = await hash(dto.password, AUTH_CONSTANTS.BCRYPT_ROUNDS);
 
-    const auth = await this.prisma.$transaction(async (tx) => {
-      const personne = await tx.personne.create({
-        data: {
-          nom: dto.nom.trim(),
-          prenom: dto.prenom.trim(),
-        },
+    try {
+      const auth = await this.prisma.$transaction(async (tx) => {
+        const personne = await tx.personne.create({
+          data: {
+            nom: dto.nom.trim(),
+            prenom: dto.prenom.trim(),
+          },
+        });
+        return tx.auth.create({
+          data: {
+            personne_id: personne.id,
+            email,
+            mot_de_passe_hash: passwordHash,
+            auth_provider: AuthProvider.LOCAL,
+            role: AuthRole.ADMIN,
+            statut: AuthStatut.ACTIF,
+            email_verified: true,
+          },
+        });
       });
-      return tx.auth.create({
-        data: {
-          personne_id: personne.id,
-          email,
-          mot_de_passe_hash: passwordHash,
-          auth_provider: AuthProvider.LOCAL,
-          role: AuthRole.ADMIN,
-          statut: AuthStatut.ACTIF,
-          email_verified: true,
-        },
-      });
-    });
 
-    return {
-      id: auth.id,
-      email: auth.email,
-      role: auth.role,
-      statut: auth.statut,
-    };
+      return {
+        id: auth.id,
+        email: auth.email,
+        role: auth.role,
+        statut: auth.statut,
+      };
+    } catch (err) {
+      if (
+        err instanceof PrismaRuntime.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException('Email déjà associé à un compte existant.');
+      }
+      throw err;
+    }
   }
 }

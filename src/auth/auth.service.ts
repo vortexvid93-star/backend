@@ -14,6 +14,11 @@ import {
   AuthStatut,
   OtpType,
 } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
+import {
+  findAuthByEmail,
+  normalizeEmail,
+} from '../common/normalize-email.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { GoogleTokenDto } from './dto/google.dto';
@@ -31,10 +36,6 @@ import { AuthCacheService } from './services/auth-cache.service';
 import { TokenService } from './services/token.service';
 
 const GENERIC_LOGIN_ERROR = 'Identifiants incorrects.';
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
 
 @Injectable()
 export class AuthService {
@@ -82,9 +83,7 @@ export class AuthService {
 
   async requestOtp(dto: EmailDto) {
     const email = normalizeEmail(dto.email);
-    const auth = await this.prisma.auth.findUnique({
-      where: { email },
-    });
+    const auth = await findAuthByEmail(this.prisma, email);
     if (!auth) {
       throw new NotFoundException(
         'Email inconnu — utilisez POST /auth/register pour créer un compte.',
@@ -99,8 +98,8 @@ export class AuthService {
 
   async verifyOtp(dto: OtpVerifyDto) {
     const email = normalizeEmail(dto.email);
-    const auth = await this.prisma.auth.findUnique({
-      where: { email },
+    const auth = await this.prisma.auth.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
       include: { personne: true },
     });
     if (!auth) {
@@ -143,10 +142,11 @@ export class AuthService {
 
   async googleLogin(dto: GoogleTokenDto) {
     const payload = await this.verifyGoogleToken(dto.id_token);
-    const email = payload.email;
-    if (!email) {
+    const rawEmail = payload.email;
+    if (!rawEmail) {
       throw new BadRequestException('id_token invalide ou expiré.');
     }
+    const email = normalizeEmail(rawEmail);
 
     const googleId = payload.sub;
     if (!googleId) {
@@ -165,8 +165,8 @@ export class AuthService {
       return { ...tokens, isNewUser: false, statusCode: HttpStatus.OK };
     }
 
-    const byEmail = await this.prisma.auth.findUnique({
-      where: { email },
+    const byEmail = await this.prisma.auth.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
       include: { personne: true },
     });
     if (byEmail) {
@@ -297,8 +297,10 @@ export class AuthService {
   }
 
   async passwordLogin(dto: PasswordLoginDto) {
-    const auth = await this.prisma.auth.findUnique({
-      where: { email: normalizeEmail(dto.email) },
+    const auth = await this.prisma.auth.findFirst({
+      where: {
+        email: { equals: normalizeEmail(dto.email), mode: 'insensitive' },
+      },
       include: { personne: true },
     });
 
@@ -332,9 +334,7 @@ export class AuthService {
 
   async requestPasswordReset(dto: EmailDto) {
     const email = normalizeEmail(dto.email);
-    const auth = await this.prisma.auth.findUnique({
-      where: { email },
-    });
+    const auth = await findAuthByEmail(this.prisma, email);
     if (auth && auth.statut !== AuthStatut.BANNI) {
       await this.otp.createAndSendOtp(
         auth.id,
@@ -348,9 +348,7 @@ export class AuthService {
 
   async verifyPasswordResetOtp(dto: OtpVerifyDto) {
     const email = normalizeEmail(dto.email);
-    const auth = await this.prisma.auth.findUnique({
-      where: { email },
-    });
+    const auth = await findAuthByEmail(this.prisma, email);
     if (!auth) {
       throw new NotFoundException('Email inconnu.');
     }
@@ -365,9 +363,7 @@ export class AuthService {
 
   async confirmPasswordReset(dto: PasswordResetConfirmDto) {
     const email = normalizeEmail(dto.email);
-    const auth = await this.prisma.auth.findUnique({
-      where: { email },
-    });
+    const auth = await findAuthByEmail(this.prisma, email);
     if (!auth) {
       throw new NotFoundException('Email inconnu.');
     }
@@ -429,7 +425,7 @@ export class AuthService {
   }
 
   private async assertEmailAvailable(email: string) {
-    const existing = await this.prisma.auth.findUnique({ where: { email } });
+    const existing = await findAuthByEmail(this.prisma, email);
     if (existing) {
       throw new ConflictException('Email déjà associé à un compte existant.');
     }
@@ -439,21 +435,31 @@ export class AuthService {
     dto: RegisterDto,
     passwordHash: string | null,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const personne = await tx.personne.create({
-        data: { nom: dto.nom.trim(), prenom: dto.prenom.trim() },
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const personne = await tx.personne.create({
+          data: { nom: dto.nom.trim(), prenom: dto.prenom.trim() },
+        });
+        return tx.auth.create({
+          data: {
+            personne_id: personne.id,
+            email: normalizeEmail(dto.email),
+            mot_de_passe_hash: passwordHash,
+            auth_provider: AuthProvider.LOCAL,
+            statut: AuthStatut.PENDING,
+            email_verified: false,
+          },
+        });
       });
-      return tx.auth.create({
-        data: {
-          personne_id: personne.id,
-          email: dto.email,
-          mot_de_passe_hash: passwordHash,
-          auth_provider: AuthProvider.LOCAL,
-          statut: AuthStatut.PENDING,
-          email_verified: false,
-        },
-      });
-    });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException('Email déjà associé à un compte existant.');
+      }
+      throw err;
+    }
   }
 
   /** Inscription email + mot de passe — compte actif immédiatement (pas d’OTP). */
@@ -461,25 +467,35 @@ export class AuthService {
     dto: RegisterDto,
     passwordHash: string,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const personne = await tx.personne.create({
-        data: { nom: dto.nom.trim(), prenom: dto.prenom.trim() },
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const personne = await tx.personne.create({
+          data: { nom: dto.nom.trim(), prenom: dto.prenom.trim() },
+        });
+        const auth = await tx.auth.create({
+          data: {
+            personne_id: personne.id,
+            email: normalizeEmail(dto.email),
+            mot_de_passe_hash: passwordHash,
+            auth_provider: AuthProvider.LOCAL,
+            statut: AuthStatut.ACTIF,
+            email_verified: true,
+          },
+        });
+        return tx.auth.findUniqueOrThrow({
+          where: { id: auth.id },
+          include: { personne: true },
+        });
       });
-      const auth = await tx.auth.create({
-        data: {
-          personne_id: personne.id,
-          email: dto.email,
-          mot_de_passe_hash: passwordHash,
-          auth_provider: AuthProvider.LOCAL,
-          statut: AuthStatut.ACTIF,
-          email_verified: true,
-        },
-      });
-      return tx.auth.findUniqueOrThrow({
-        where: { id: auth.id },
-        include: { personne: true },
-      });
-    });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException('Email déjà associé à un compte existant.');
+      }
+      throw err;
+    }
   }
 
   private async verifyGoogleToken(idToken: string): Promise<TokenPayload> {
