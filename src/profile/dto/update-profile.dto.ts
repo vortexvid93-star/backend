@@ -25,7 +25,10 @@ export class UpdateProfileDto {
 
   /** Date de naissance au format ISO `YYYY-MM-DD`. */
   @IsOptional()
-  @IsDateString({ strict: true }, { message: 'date_naissance doit être au format YYYY-MM-DD.' })
+  @IsDateString(
+    { strict: true },
+    { message: 'date_naissance doit être au format YYYY-MM-DD.' },
+  )
   date_naissance?: string;
 
   /** URL photo (si upload manuel ; préférer `POST /me/photo`). */

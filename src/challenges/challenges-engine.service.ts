@@ -113,10 +113,7 @@ export class ChallengesEngineService {
   }
 
   private computeBookCompletionDelta(
-    defi: Pick<
-      DefiRow,
-      'type' | 'livre_id' | 'categorie_id' | 'auteur_id'
-    >,
+    defi: Pick<DefiRow, 'type' | 'livre_id' | 'categorie_id' | 'auteur_id'>,
     book: BookContext,
   ): number {
     switch (defi.type) {
@@ -125,11 +122,14 @@ export class ChallengesEngineService {
       case TypeDefi.LIVRE_SPECIFIQUE:
         return defi.livre_id === book.livreId ? 1 : 0;
       case TypeDefi.CATEGORIE:
-        return defi.categorie_id && book.categorieIds.includes(defi.categorie_id)
+        return defi.categorie_id &&
+          book.categorieIds.includes(defi.categorie_id)
           ? 1
           : 0;
       case TypeDefi.AUTEUR:
-        return defi.auteur_id && book.auteurIds.includes(defi.auteur_id) ? 1 : 0;
+        return defi.auteur_id && book.auteurIds.includes(defi.auteur_id)
+          ? 1
+          : 0;
       default:
         return 0;
     }

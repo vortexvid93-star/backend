@@ -24,14 +24,16 @@ export class BibliothequeListItemSchema {
 }
 
 export class PaginatedBibliothequeListSchema {
-  @ApiProperty({ type: [BibliothequeListItemSchema] }) data: BibliothequeListItemSchema[];
+  @ApiProperty({ type: [BibliothequeListItemSchema] })
+  data: BibliothequeListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
 export class BibliothequeDetailSchema extends BibliothequeListItemSchema {
   @ApiProperty({ enum: StatutBibliotheque }) statut: StatutBibliotheque;
   @ApiProperty() acces_livres: string;
-  @ApiProperty({ type: [LivrePopulaireSchema] }) livres_populaires: LivrePopulaireSchema[];
+  @ApiProperty({ type: [LivrePopulaireSchema] })
+  livres_populaires: LivrePopulaireSchema[];
 }
 
 export class BibliothequeStatsSchema {

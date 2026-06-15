@@ -62,7 +62,9 @@ export function mapRecommandation(
   ctx?: RecommendationContext,
 ) {
   const score =
-    typeof row.score === 'object' && row.score !== null && 'toNumber' in row.score
+    typeof row.score === 'object' &&
+    row.score !== null &&
+    'toNumber' in row.score
       ? row.score.toNumber()
       : Number(row.score);
 
@@ -98,9 +100,7 @@ export function mapSimilarLivre(
   raison: RaisonRecommandation,
   ctx?: RecommendationContext,
 ) {
-  const contexte = ctx
-    ? buildRecommendationContexte(raison, livre, ctx)
-    : null;
+  const contexte = ctx ? buildRecommendationContexte(raison, livre, ctx) : null;
   return {
     livre: {
       id: livre.id,

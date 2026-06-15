@@ -34,7 +34,9 @@ import { UpdateAdminChallengeDto } from './dto/update-admin-challenge.dto';
 @Controller('admin/challenges')
 @UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class AdminChallengesController {
-  constructor(private readonly adminChallengesService: AdminChallengesService) {}
+  constructor(
+    private readonly adminChallengesService: AdminChallengesService,
+  ) {}
 
   @Get()
   @AdminChallengesListDocs()

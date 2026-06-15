@@ -46,7 +46,7 @@ export class CronSchedulerService implements OnModuleInit {
     const job = new CronJob(customExpr, () => {
       void this.handleYoutubeSync();
     });
-    this.schedulerRegistry.addCronJob(CRON_JOB_NAMES.YOUTUBE_SYNC, job as any);
+    this.schedulerRegistry.addCronJob(CRON_JOB_NAMES.YOUTUBE_SYNC, job);
     job.start();
     this.logger.log(`YouTube sync reprogrammé : ${customExpr}`);
   }

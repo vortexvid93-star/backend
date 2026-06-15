@@ -37,10 +37,7 @@ export class SearchController {
   @Get()
   @SearchBooksDocs()
   @HttpCode(HttpStatus.OK)
-  searchBooks(
-    @CurrentUser() user: JwtPayload,
-    @Query() query: SearchQueryDto,
-  ) {
+  searchBooks(@CurrentUser() user: JwtPayload, @Query() query: SearchQueryDto) {
     return this.searchService.searchBooks(user.sub, query);
   }
 

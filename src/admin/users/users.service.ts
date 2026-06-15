@@ -196,10 +196,7 @@ export class AdminUsersService {
       throw new ConflictException('Email déjà associé à un compte existant.');
     }
 
-    const passwordHash = await hash(
-      dto.password,
-      AUTH_CONSTANTS.BCRYPT_ROUNDS,
-    );
+    const passwordHash = await hash(dto.password, AUTH_CONSTANTS.BCRYPT_ROUNDS);
 
     const auth = await this.prisma.$transaction(async (tx) => {
       const personne = await tx.personne.create({

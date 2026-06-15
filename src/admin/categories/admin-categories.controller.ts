@@ -33,7 +33,9 @@ import { UpdateAdminCategorieDto } from './dto/update-admin-categorie.dto';
 @Controller('admin/categories')
 @UseGuards(JwtAuthGuard, AdminRoleGuard)
 export class AdminCategoriesController {
-  constructor(private readonly adminCategoriesService: AdminCategoriesService) {}
+  constructor(
+    private readonly adminCategoriesService: AdminCategoriesService,
+  ) {}
 
   @Get()
   @AdminCategoriesListDocs()

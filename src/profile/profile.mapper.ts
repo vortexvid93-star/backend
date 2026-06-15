@@ -1,4 +1,9 @@
-import type { Abonnement, Auth, Personne, PlanAbonnement } from '../../generated/prisma/client';
+import type {
+  Abonnement,
+  Auth,
+  Personne,
+  PlanAbonnement,
+} from '../../generated/prisma/client';
 
 export function formatDateOnly(value: Date | null): string | null {
   if (!value) return null;
@@ -73,26 +78,24 @@ export function mapDashboardProfile(
   };
 }
 
-export function mapReadingItem(
-  row: {
+export function mapReadingItem(row: {
+  id: string;
+  page_actuelle: number;
+  pourcentage: number;
+  duree_lecture_min: number;
+  statut: string;
+  derniere_maj: Date;
+  date_debut: Date;
+  date_fin: Date | null;
+  livre: {
     id: string;
-    page_actuelle: number;
-    pourcentage: number;
-    duree_lecture_min: number;
-    statut: string;
-    derniere_maj: Date;
-    date_debut: Date;
-    date_fin: Date | null;
-    livre: {
-      id: string;
-      titre: string;
-      couverture_url: string | null;
-      type_livre: string;
-      nombre_pages: number | null;
-      livre_auteurs: { auteur: { nom: string; prenom: string | null } }[];
-    };
-  },
-) {
+    titre: string;
+    couverture_url: string | null;
+    type_livre: string;
+    nombre_pages: number | null;
+    livre_auteurs: { auteur: { nom: string; prenom: string | null } }[];
+  };
+}) {
   const firstAuteur = row.livre.livre_auteurs[0]?.auteur;
   const auteur = firstAuteur
     ? `${firstAuteur.prenom ?? ''} ${firstAuteur.nom}`.trim()

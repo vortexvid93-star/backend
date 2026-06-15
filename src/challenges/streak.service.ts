@@ -13,7 +13,10 @@ export class StreakService {
    * Appelé après chaque PATCH /books/:id/progress.
    * Met à jour le streak quotidien et les minutes lues aujourd'hui.
    */
-  async updateAfterReading(authId: string, minutesAdded: number): Promise<void> {
+  async updateAfterReading(
+    authId: string,
+    minutesAdded: number,
+  ): Promise<void> {
     if (minutesAdded <= 0) return;
 
     const auth = await this.prisma.auth.findUnique({
@@ -36,7 +39,9 @@ export class StreakService {
 
     const today = new Date();
     const todayKey = toUtcDateKey(today);
-    const lastKey = p.derniere_lecture_date ? toUtcDateKey(p.derniere_lecture_date) : null;
+    const lastKey = p.derniere_lecture_date
+      ? toUtcDateKey(p.derniere_lecture_date)
+      : null;
     const yesterdayKey = toUtcDateKey(new Date(today.getTime() - 86_400_000));
 
     let newStreak = p.streak_actuel;
@@ -52,7 +57,8 @@ export class StreakService {
     }
 
     // Mise à jour minutes du jour (reset si nouveau jour)
-    newMinutes = lastKey === todayKey ? newMinutes + minutesAdded : minutesAdded;
+    newMinutes =
+      lastKey === todayKey ? newMinutes + minutesAdded : minutesAdded;
 
     await this.prisma.personne.update({
       where: { id: p.id },
@@ -100,10 +106,13 @@ export class StreakService {
     }
 
     const todayKey = toUtcDateKey(new Date());
-    const lastKey = p.derniere_lecture_date ? toUtcDateKey(p.derniere_lecture_date) : null;
+    const lastKey = p.derniere_lecture_date
+      ? toUtcDateKey(p.derniere_lecture_date)
+      : null;
 
     // Si on n'a pas lu aujourd'hui, les minutes du jour sont 0
-    const minutesAujordhui = lastKey === todayKey ? p.minutes_lus_aujourd_hui : 0;
+    const minutesAujordhui =
+      lastKey === todayKey ? p.minutes_lus_aujourd_hui : 0;
 
     return {
       streak_actuel: p.streak_actuel,

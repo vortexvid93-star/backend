@@ -1,5 +1,11 @@
 import { TypeDefi } from '../../generated/prisma/enums';
-import type { Badge, Categorie, Auteur, Livre, UserDefi } from '../../generated/prisma/client';
+import type {
+  Badge,
+  Categorie,
+  Auteur,
+  Livre,
+  UserDefi,
+} from '../../generated/prisma/client';
 
 type DefiWithBadge = {
   id: string;
@@ -27,14 +33,19 @@ export function mapBadgeSummary(badge: Badge) {
 }
 
 export function mapMaParticipation(
-  participation: Pick<UserDefi, 'progression' | 'statut' | 'date_completion'> | null | undefined,
+  participation:
+    | Pick<UserDefi, 'progression' | 'statut' | 'date_completion'>
+    | null
+    | undefined,
 ) {
   if (!participation) return null;
   return {
     progression: participation.progression,
     statut: participation.statut,
     ...(participation.date_completion !== undefined
-      ? { date_completion: participation.date_completion?.toISOString() ?? null }
+      ? {
+          date_completion: participation.date_completion?.toISOString() ?? null,
+        }
       : {}),
   };
 }
@@ -79,7 +90,11 @@ export function mapChallengeDetail(
         : null,
     auteur:
       defi.type === TypeDefi.AUTEUR && defi.auteur
-        ? { id: defi.auteur.id, nom: defi.auteur.nom, prenom: defi.auteur.prenom }
+        ? {
+            id: defi.auteur.id,
+            nom: defi.auteur.nom,
+            prenom: defi.auteur.prenom,
+          }
         : null,
     livre:
       defi.type === TypeDefi.LIVRE_SPECIFIQUE && defi.livre

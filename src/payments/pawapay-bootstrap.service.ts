@@ -25,10 +25,10 @@ export class PawaPayBootstrapService implements OnModuleInit {
     const apiBase = resolvePawaPayApiBase(this.config);
     const publicBase = resolvePawaPayPublicBase(this.config);
     const prod = isPawaPayProduction(this.config);
-    const tokenSet = Boolean(this.config.get<string>('PAWAPAY_API_TOKEN')?.trim());
-    const callbacks = publicBase
-      ? getPawaPayCallbackUrls(publicBase)
-      : null;
+    const tokenSet = Boolean(
+      this.config.get<string>('PAWAPAY_API_TOKEN')?.trim(),
+    );
+    const callbacks = publicBase ? getPawaPayCallbackUrls(publicBase) : null;
 
     this.logger.log(
       [
@@ -43,9 +43,7 @@ export class PawaPayBootstrapService implements OnModuleInit {
     );
 
     if (callbacks) {
-      this.logger.log(
-        `Dashboard PawaPay → Deposits: ${callbacks.deposits}`,
-      );
+      this.logger.log(`Dashboard PawaPay → Deposits: ${callbacks.deposits}`);
     }
   }
 }

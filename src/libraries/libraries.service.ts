@@ -9,10 +9,7 @@ import {
   TypeBibliotheque,
 } from '../../generated/prisma/enums';
 import { BooksCatalogService } from '../books/books-catalog.service';
-import {
-  BOOK_LIST_INCLUDE,
-  BooksSort,
-} from '../books/books-query.builder';
+import { BOOK_LIST_INCLUDE, BooksSort } from '../books/books-query.builder';
 import type { LivreCatalogRow } from '../books/books.mapper';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
@@ -76,10 +73,16 @@ export class LibrariesService {
   async getLibrariesSummary() {
     const [internes, externes, livresInternes] = await Promise.all([
       this.prisma.bibliotheque.count({
-        where: { statut: StatutBibliotheque.ACTIVE, type: TypeBibliotheque.INTERNE },
+        where: {
+          statut: StatutBibliotheque.ACTIVE,
+          type: TypeBibliotheque.INTERNE,
+        },
       }),
       this.prisma.bibliotheque.count({
-        where: { statut: StatutBibliotheque.ACTIVE, type: TypeBibliotheque.EXTERNE },
+        where: {
+          statut: StatutBibliotheque.ACTIVE,
+          type: TypeBibliotheque.EXTERNE,
+        },
       }),
       this.prisma.livre.count({
         where: {
@@ -166,7 +169,10 @@ export class LibrariesService {
     const typeCount = new Map<string, number>();
 
     for (const livre of livres) {
-      typeCount.set(livre.type_livre, (typeCount.get(livre.type_livre) ?? 0) + 1);
+      typeCount.set(
+        livre.type_livre,
+        (typeCount.get(livre.type_livre) ?? 0) + 1,
+      );
       if (livre.statistique?.note_moyenne != null) {
         sumNotes += livre.statistique.note_moyenne;
         countNotes += 1;
@@ -180,9 +186,7 @@ export class LibrariesService {
       type: library.type,
       nb_livres,
       note_moyenne_globale:
-        countNotes > 0
-          ? Math.round((sumNotes / countNotes) * 100) / 100
-          : null,
+        countNotes > 0 ? Math.round((sumNotes / countNotes) * 100) / 100 : null,
       total_lectures,
       total_terminees,
       repartition_type_livre: [...typeCount.entries()].map(

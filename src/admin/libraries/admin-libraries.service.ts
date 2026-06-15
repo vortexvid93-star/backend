@@ -101,7 +101,10 @@ export class AdminLibrariesService {
     if (dto.couverture_url !== undefined) {
       data.couverture_url = dto.couverture_url.trim() || null;
     }
-    if (dto.url_externe !== undefined && existing.type === TypeBibliotheque.EXTERNE) {
+    if (
+      dto.url_externe !== undefined &&
+      existing.type === TypeBibliotheque.EXTERNE
+    ) {
       data.url_externe = nextUrl;
     } else if (
       dto.url_externe !== undefined &&

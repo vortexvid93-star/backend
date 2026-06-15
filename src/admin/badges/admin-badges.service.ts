@@ -111,7 +111,9 @@ export class AdminBadgesService {
   }
 
   private async findBadgeOrThrow(badgeId: string) {
-    const badge = await this.prisma.badge.findUnique({ where: { id: badgeId } });
+    const badge = await this.prisma.badge.findUnique({
+      where: { id: badgeId },
+    });
     if (!badge) {
       throw new NotFoundException('Badge introuvable.');
     }

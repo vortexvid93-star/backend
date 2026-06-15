@@ -5,10 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
-import {
-  StatutLivre,
-  TypeLivre,
-} from '../../../generated/prisma/enums';
+import { StatutLivre, TypeLivre } from '../../../generated/prisma/enums';
 import { BOOK_LIST_INCLUDE } from '../../books/books-query.builder';
 import { buildPaginationMeta } from '../../common/pagination.util';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
@@ -83,7 +80,7 @@ export class AdminBooksService {
         );
       }
       this.bookStorage.assertValidBookFile(file);
-      const upload = await this.bookStorage.uploadBookFile(file!);
+      const upload = await this.bookStorage.uploadBookFile(file);
       cloudinaryPublicId = upload.objectKey;
     } else {
       if (file) {
@@ -348,7 +345,9 @@ export class AdminBooksService {
   }
 
   private async findLivreOrThrow(livreId: string) {
-    const livre = await this.prisma.livre.findUnique({ where: { id: livreId } });
+    const livre = await this.prisma.livre.findUnique({
+      where: { id: livreId },
+    });
     if (!livre) {
       throw new NotFoundException('Livre introuvable.');
     }

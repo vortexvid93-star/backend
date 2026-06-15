@@ -31,20 +31,24 @@ export class EmailService {
       this.provider = 'smtp';
       this.smtp = this.createSmtpTransport();
       this.smtpFrom = this.buildSmtpFrom();
-      this.logger.log(`E-mails OTP via SMTP (${this.config.get<string>('SMTP_HOST')})`);
+      this.logger.log(
+        `E-mails OTP via SMTP (${this.config.get<string>('SMTP_HOST')})`,
+      );
     } else if (configured === 'resend' && resendReady) {
       this.provider = 'resend';
-      this.resend = new Resend(this.config.get<string>('RESEND_API_KEY')!);
+      this.resend = new Resend(this.config.get<string>('RESEND_API_KEY'));
       this.resendFrom = this.config.get<string>('RESEND_FROM_EMAIL')!;
     } else if (resendReady) {
       this.provider = 'resend';
-      this.resend = new Resend(this.config.get<string>('RESEND_API_KEY')!);
+      this.resend = new Resend(this.config.get<string>('RESEND_API_KEY'));
       this.resendFrom = this.config.get<string>('RESEND_FROM_EMAIL')!;
     } else if (smtpReady) {
       this.provider = 'smtp';
       this.smtp = this.createSmtpTransport();
       this.smtpFrom = this.buildSmtpFrom();
-      this.logger.log(`E-mails OTP via SMTP (${this.config.get<string>('SMTP_HOST')}) — EMAIL_PROVIDER non défini`);
+      this.logger.log(
+        `E-mails OTP via SMTP (${this.config.get<string>('SMTP_HOST')}) — EMAIL_PROVIDER non défini`,
+      );
     } else {
       this.provider = 'console';
       this.logger.warn(
@@ -124,9 +128,9 @@ export class EmailService {
   private isSmtpConfigured(): boolean {
     return Boolean(
       this.config.get<string>('SMTP_HOST')?.trim() &&
-        this.config.get<string>('SMTP_USER')?.trim() &&
-        this.config.get<string>('SMTP_PASSWORD')?.trim() &&
-        this.config.get<string>('SMTP_FROM_EMAIL')?.trim(),
+      this.config.get<string>('SMTP_USER')?.trim() &&
+      this.config.get<string>('SMTP_PASSWORD')?.trim() &&
+      this.config.get<string>('SMTP_FROM_EMAIL')?.trim(),
     );
   }
 

@@ -188,5 +188,4 @@ export class BooksSocialService {
 
     return comment;
   }
-
 }

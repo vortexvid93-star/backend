@@ -1,9 +1,5 @@
 import { applyDecorators } from '@nestjs/common';
-import {
-  ApiOkResponse,
-  ApiOperation,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import {
   ApiJwtAuthenticated,
   ApiJwtCheckout,
@@ -91,7 +87,8 @@ export const PaymentsReturnDocs = () =>
     ApiQuery({
       name: 'transaction_id',
       required: false,
-      description: 'ID transaction renvoyé par le prestataire dans l’URL de retour.',
+      description:
+        'ID transaction renvoyé par le prestataire dans l’URL de retour.',
     }),
     ApiOperation({
       summary: 'Page de retour après paiement',

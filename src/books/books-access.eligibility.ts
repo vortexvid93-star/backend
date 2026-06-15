@@ -33,8 +33,7 @@ export const BLOCK_MESSAGES: Record<AccessBlockCode, string> = {
   LIVRE_INDISPONIBLE: 'Ce livre n’est pas disponible.',
   RESSOURCE_MANQUANTE: 'La ressource numérique de ce livre est indisponible.',
   NON_TELECHARGEABLE: 'Ce livre n’est pas téléchargeable.',
-  PROGRESSION_REQUISE:
-    'Ouvrez le livre en lecture avant de le télécharger.',
+  PROGRESSION_REQUISE: 'Ouvrez le livre en lecture avant de le télécharger.',
 };
 
 export function resolveAccesType(livre: Livre): AccesRessourceType {

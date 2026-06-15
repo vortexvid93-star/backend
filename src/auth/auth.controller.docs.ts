@@ -85,7 +85,9 @@ export const AuthGoogleDocs = () =>
     }),
     ApiOkResponse({ type: AuthTokensWithNewUserSchema }),
     ApiCreatedResponse({ type: AuthTokensWithNewUserSchema }),
-    ApiUnauthorizedResponse({ description: 'Token Google invalide ou audience incorrecte.' }),
+    ApiUnauthorizedResponse({
+      description: 'Token Google invalide ou audience incorrecte.',
+    }),
   );
 
 export const AuthGoogleLinkDocs = () =>
@@ -98,7 +100,9 @@ export const AuthGoogleLinkDocs = () =>
         '**Frontend** : paramètres compte → « Lier Google ».',
     }),
     ApiOkResponse({ type: MessageResponseSchema }),
-    ApiConflictResponse({ description: 'Ce compte Google est déjà lié à un autre utilisateur.' }),
+    ApiConflictResponse({
+      description: 'Ce compte Google est déjà lié à un autre utilisateur.',
+    }),
   );
 
 export const AuthAddPasswordDocs = () =>
@@ -137,7 +141,9 @@ export const AuthPasswordLoginDocs = () =>
         '**Frontend** : écran login email/password.',
     }),
     ApiOkResponse({ type: AuthTokensResponseSchema }),
-    ApiUnauthorizedResponse({ description: 'Identifiants incorrects (message générique).' }),
+    ApiUnauthorizedResponse({
+      description: 'Identifiants incorrects (message générique).',
+    }),
   );
 
 export const AuthPasswordResetRequestDocs = () =>
@@ -171,7 +177,9 @@ export const AuthPasswordResetConfirmDocs = () =>
         'Valide le code reçu par email et définit le nouveau mot de passe, puis connecte l’utilisateur (tokens).',
     }),
     ApiOkResponse({ type: AuthTokensResponseSchema }),
-    ApiBadRequestResponse({ description: 'OTP invalide ou mot de passe non conforme.' }),
+    ApiBadRequestResponse({
+      description: 'OTP invalide ou mot de passe non conforme.',
+    }),
   );
 
 export const AuthRefreshDocs = () =>
@@ -183,7 +191,9 @@ export const AuthRefreshDocs = () =>
         '**Frontend** : appeler en intercepteur HTTP sur 401, puis rejouer la requête avec le nouvel `access_token`.',
     }),
     ApiOkResponse({ type: AuthTokensResponseSchema }),
-    ApiUnauthorizedResponse({ description: 'Refresh token invalide, expiré ou révoqué.' }),
+    ApiUnauthorizedResponse({
+      description: 'Refresh token invalide, expiré ou révoqué.',
+    }),
   );
 
 export const AuthLogoutDocs = () =>

@@ -139,7 +139,8 @@ export const ProfileBadgesSummaryDocs = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Résumé des badges',
-      description: 'Nombre obtenus / total et dernier badge débloqué. **Frontend** : widget compact.',
+      description:
+        'Nombre obtenus / total et dernier badge débloqué. **Frontend** : widget compact.',
     }),
     ApiOkResponse({ type: ProfileBadgesSummarySchema }),
   );
@@ -148,7 +149,8 @@ export const ProfileBadgesDocs = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Liste complète des badges utilisateur',
-      description: 'Tous les badges avec statut obtenu / verrouillé. **Frontend** : galerie badges.',
+      description:
+        'Tous les badges avec statut obtenu / verrouillé. **Frontend** : galerie badges.',
     }),
     ApiOkResponse({ type: ProfileBadgesListSchema }),
   );
@@ -157,7 +159,8 @@ export const ProfileChallengesSummaryDocs = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Résumé des défis en cours',
-      description: 'Compteurs et défis actifs prioritaires. **Frontend** : widget défis sur le profil.',
+      description:
+        'Compteurs et défis actifs prioritaires. **Frontend** : widget défis sur le profil.',
     }),
     ApiOkResponse({ type: ProfileChallengesSummarySchema }),
   );

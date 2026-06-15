@@ -1,4 +1,8 @@
-import { BadGatewayException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 
 export interface PawaPayApiErrorBody {
   status?: string;
@@ -34,7 +38,9 @@ export async function pawapayFetchJson<T>(
   try {
     parsed = JSON.parse(text) as PawaPayApiErrorBody & T;
   } catch {
-    logger.error(`PawaPay réponse non-JSON ${res.status}: ${text.slice(0, 500)}`);
+    logger.error(
+      `PawaPay réponse non-JSON ${res.status}: ${text.slice(0, 500)}`,
+    );
     throw new BadGatewayException('Réponse PawaPay invalide.');
   }
 
@@ -53,7 +59,9 @@ export async function pawapayFetchJson<T>(
       parsed.message ??
       `Erreur PawaPay (${res.status})`;
     const code = reason?.failureCode ?? String(res.status);
-    logger.warn(`PawaPay ← ${res.status} ${code}: ${message} (${logContext ?? url})`);
+    logger.warn(
+      `PawaPay ← ${res.status} ${code}: ${message} (${logContext ?? url})`,
+    );
 
     if (res.status === 400 || code.startsWith('INVALID_')) {
       throw new BadRequestException(`PawaPay : ${message}`);

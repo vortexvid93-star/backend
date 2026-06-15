@@ -12,11 +12,7 @@ import { StreakService } from './streak.service';
 
 @Module({
   imports: [AuthModule],
-  controllers: [
-    ChallengesController,
-    BadgesController,
-    GamificationController,
-  ],
+  controllers: [ChallengesController, BadgesController, GamificationController],
   providers: [
     ChallengesEngineService,
     ChallengesService,

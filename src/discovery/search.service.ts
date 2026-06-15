@@ -112,9 +112,7 @@ export class SearchService {
     }
 
     if (row.auth_id !== authId) {
-      throw new ForbiddenException(
-        "Entrée appartient à un autre utilisateur.",
-      );
+      throw new ForbiddenException('Entrée appartient à un autre utilisateur.');
     }
 
     await this.prisma.historiqueRecherche.delete({ where: { id } });

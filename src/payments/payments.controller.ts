@@ -74,20 +74,14 @@ export class PaymentsController {
   @PaymentsInitDocs()
   @UseGuards(JwtAuthenticatedGuard, ActiveAccountGuard)
   @HttpCode(HttpStatus.OK)
-  initPayment(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: InitPaymentDto,
-  ) {
+  initPayment(@CurrentUser() user: JwtPayload, @Body() dto: InitPaymentDto) {
     return this.paymentsService.initPayment(user.sub, dto);
   }
 
   @Get('webhook')
   @PaymentsWebhookPingDocs()
   @HttpCode(HttpStatus.OK)
-  webhookGet(
-    @Query() query: Record<string, string>,
-    @Res() res: Response,
-  ) {
+  webhookGet(@Query() query: Record<string, string>, @Res() res: Response) {
     res.status(HttpStatus.OK).send();
     const ref = this.extractWebhookRef(query);
     if (ref) {
@@ -104,16 +98,14 @@ export class PaymentsController {
     @Res() res: Response,
   ) {
     res.status(HttpStatus.OK).send();
-    const merged = { ...query, ...(body as Record<string, unknown>) };
+    const merged = { ...query, ...body };
     const ref = this.extractWebhookRef(merged);
     if (ref) {
       this.paymentsService.processPaymentNotification(ref, merged);
     }
   }
 
-  private extractWebhookRef(
-    params: Record<string, unknown>,
-  ): string | null {
+  private extractWebhookRef(params: Record<string, unknown>): string | null {
     const keys = [
       'payment_ref',
       'transaction_id',

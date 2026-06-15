@@ -11,7 +11,10 @@ export function activeSubscriptionWhere(authId: string, at: Date = new Date()) {
 }
 
 /** Abonnement programmé (démarre après la fin de l'actuel). */
-export function upcomingSubscriptionWhere(authId: string, at: Date = new Date()) {
+export function upcomingSubscriptionWhere(
+  authId: string,
+  at: Date = new Date(),
+) {
   return {
     auth_id: authId,
     statut: StatutAbonnement.ACTIF,
@@ -19,7 +22,10 @@ export function upcomingSubscriptionWhere(authId: string, at: Date = new Date())
   };
 }
 
-export function computeJoursRestants(dateFin: Date, at: Date = new Date()): number {
+export function computeJoursRestants(
+  dateFin: Date,
+  at: Date = new Date(),
+): number {
   return Math.max(
     0,
     Math.ceil((dateFin.getTime() - at.getTime()) / (1000 * 60 * 60 * 24)),

@@ -300,13 +300,11 @@ export class PaymentsService {
     };
   }
 
-  private async resolveAbonnementAfterExtension(
-    paiement: {
-      auth_id: string;
-      plan_id: string;
-      statut: StatutPaiement;
-    },
-  ) {
+  private async resolveAbonnementAfterExtension(paiement: {
+    auth_id: string;
+    plan_id: string;
+    statut: StatutPaiement;
+  }) {
     if (paiement.statut !== StatutPaiement.SUCCES) {
       return null;
     }
@@ -350,7 +348,10 @@ export class PaymentsService {
     return this.getReturnStatus(dto.transaction_id);
   }
 
-  processPaymentNotification(rawRef: string, params?: Record<string, unknown>): void {
+  processPaymentNotification(
+    rawRef: string,
+    params?: Record<string, unknown>,
+  ): void {
     void this.handleWebhook(rawRef, params).catch((error) => {
       this.logger.error(
         `Webhook async ref=${rawRef}`,
@@ -420,7 +421,9 @@ export class PaymentsService {
 
     switch (verification.status) {
       case 'ACCEPTED':
-        this.logger.log(`handleWebhook ref=${ref} → SUCCES + activation abonnement`);
+        this.logger.log(
+          `handleWebhook ref=${ref} → SUCCES + activation abonnement`,
+        );
         await this.activateSubscription(paiement.id, {
           operateur: verification.operateur ?? null,
           numero_telephone: verification.numero_telephone ?? null,
@@ -477,8 +480,7 @@ export class PaymentsService {
 
   private async assertCanInitPayment(authId: string, planId: string) {
     const since = new Date(
-      Date.now() -
-        PAYMENTS_CONSTANTS.PENDING_DUPLICATE_MINUTES * 60 * 1000,
+      Date.now() - PAYMENTS_CONSTANTS.PENDING_DUPLICATE_MINUTES * 60 * 1000,
     );
 
     const recentPending = await this.prisma.paiement.findFirst({
@@ -529,11 +531,11 @@ export class PaymentsService {
       (typeof params?.paymentId === 'string' ? params.paymentId : null) ||
       (typeof params?.payment_id === 'string' ? params.payment_id : null);
 
-    const depositId =
-      rawRef.startsWith('__depositId:') ?
-        rawRef.replace('__depositId:', '')
-      : typeof params?.depositId === 'string' ? params.depositId
-      : null;
+    const depositId = rawRef.startsWith('__depositId:')
+      ? rawRef.replace('__depositId:', '')
+      : typeof params?.depositId === 'string'
+        ? params.depositId
+        : null;
 
     if (depositId) {
       const byDeposit = await this.prisma.paiement.findMany({

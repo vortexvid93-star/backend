@@ -44,7 +44,9 @@ export class RecommendationsService {
         statut: StatutLivre.PUBLIE,
         ...(typeLivre ? { type_livre: typeLivre } : {}),
         // N'exclut que les livres terminés — les livres en cours restent recommandables
-        progressions: { none: { auth_id: authId, statut: StatutProgression.TERMINE } },
+        progressions: {
+          none: { auth_id: authId, statut: StatutProgression.TERMINE },
+        },
       },
     };
   }
@@ -151,17 +153,33 @@ export class RecommendationsService {
     // Fallback : si le pool de recommandations est insuffisant, compléter avec des livres populaires
     if (picks.length < limit) {
       const alreadyShownIds = new Set(picks.map((p) => p.livre.id));
-      type FallbackLivre = Awaited<ReturnType<typeof this.prisma.livre.findFirst>> & {
-        livre_auteurs: { auteur: { id: string; nom: string; prenom: string; deleted_at: Date | null } }[];
-        appartenir: { categorie: { id: string; nom: string; deleted_at: Date | null } }[];
-        statistique: { note_moyenne: number | null; nb_lectures: number } | null;
+      type FallbackLivre = Awaited<
+        ReturnType<typeof this.prisma.livre.findFirst>
+      > & {
+        livre_auteurs: {
+          auteur: {
+            id: string;
+            nom: string;
+            prenom: string;
+            deleted_at: Date | null;
+          };
+        }[];
+        appartenir: {
+          categorie: { id: string; nom: string; deleted_at: Date | null };
+        }[];
+        statistique: {
+          note_moyenne: number | null;
+          nb_lectures: number;
+        } | null;
       };
 
-      const fallbackBooks = await this.prisma.livre.findMany({
+      const fallbackBooks = (await this.prisma.livre.findMany({
         where: {
           statut: StatutLivre.PUBLIE,
           id: { notIn: [...alreadyShownIds] },
-          progressions: { none: { auth_id: authId, statut: StatutProgression.TERMINE } },
+          progressions: {
+            none: { auth_id: authId, statut: StatutProgression.TERMINE },
+          },
         },
         include: BOOK_LIST_INCLUDE,
         orderBy: [
@@ -169,7 +187,7 @@ export class RecommendationsService {
           { createdAt: 'desc' },
         ],
         take: limit - picks.length,
-      }) as unknown as FallbackLivre[];
+      })) as unknown as FallbackLivre[];
 
       for (const livre of fallbackBooks) {
         picks.push({
@@ -183,7 +201,11 @@ export class RecommendationsService {
             nb_lectures: livre.statistique?.nb_lectures ?? 0,
             auteurs: livre.livre_auteurs
               .filter((la) => !la.auteur.deleted_at)
-              .map((la) => ({ id: la.auteur.id, nom: la.auteur.nom, prenom: la.auteur.prenom })),
+              .map((la) => ({
+                id: la.auteur.id,
+                nom: la.auteur.nom,
+                prenom: la.auteur.prenom,
+              })),
             categories: livre.appartenir
               .filter((a) => !a.categorie.deleted_at)
               .map((a) => ({ id: a.categorie.id, nom: a.categorie.nom })),
@@ -269,7 +291,11 @@ export class RecommendationsService {
       throw new NotFoundException('Livre introuvable.');
     }
 
-    return this.buildSimilarResponse(authId, livreId, query.limit ?? C.MAX_SIMILAR_DEFAULT);
+    return this.buildSimilarResponse(
+      authId,
+      livreId,
+      query.limit ?? C.MAX_SIMILAR_DEFAULT,
+    );
   }
 
   async getSimilarBooks(
@@ -361,11 +387,7 @@ export class RecommendationsService {
     return this.interact(authId, id, { vu: true });
   }
 
-  async interact(
-    authId: string,
-    id: string,
-    dto: InteractRecommendationDto,
-  ) {
+  async interact(authId: string, id: string, dto: InteractRecommendationDto) {
     if (dto.vu !== true && dto.clique !== true) {
       throw new BadRequestException(
         'Indiquez au moins vu: true ou clique: true.',

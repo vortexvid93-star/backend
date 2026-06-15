@@ -50,7 +50,9 @@ export const AdminChallengesUpdateDocs = () =>
       description: 'Type et badge_id non modifiables.',
     }),
     ApiOkResponse({ type: IdUpdatedAtSchema }),
-    ApiBadRequestResponse({ description: 'Défi non ACTIF ou dates invalides.' }),
+    ApiBadRequestResponse({
+      description: 'Défi non ACTIF ou dates invalides.',
+    }),
     ApiNotFoundResponse(),
   );
 
@@ -59,8 +61,7 @@ export const AdminChallengesCancelDocs = () =>
     challengeIdParam(),
     ApiOperation({
       summary: 'Annuler un défi',
-      description:
-        'statut=ANNULE ; UserDefi EN_COURS → ECHOUE (RG63).',
+      description: 'statut=ANNULE ; UserDefi EN_COURS → ECHOUE (RG63).',
     }),
     ApiOkResponse({ type: AdminChallengeCancelSchema }),
     ApiNotFoundResponse(),

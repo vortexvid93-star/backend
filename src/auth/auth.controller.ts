@@ -91,10 +91,7 @@ export class AuthController {
   @AuthGoogleLinkDocs()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  linkGoogle(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: GoogleTokenDto,
-  ) {
+  linkGoogle(@CurrentUser() user: JwtPayload, @Body() dto: GoogleTokenDto) {
     return this.authService.linkGoogle(user.sub, dto);
   }
 
@@ -102,10 +99,7 @@ export class AuthController {
   @AuthAddPasswordDocs()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  addPassword(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: AddPasswordDto,
-  ) {
+  addPassword(@CurrentUser() user: JwtPayload, @Body() dto: AddPasswordDto) {
     return this.authService.addPassword(user.sub, dto);
   }
 
@@ -159,10 +153,7 @@ export class AuthController {
   @AuthLogoutDocs()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  logout(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: RefreshTokenDto,
-  ) {
+  logout(@CurrentUser() user: JwtPayload, @Body() dto: RefreshTokenDto) {
     return this.authService.logout(user.jti, dto.refresh_token);
   }
 }

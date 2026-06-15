@@ -56,9 +56,7 @@ export function mapAdminUserDetailPersonne(personne: Personne) {
   };
 }
 
-export function mapAdminAbonnement(
-  row: Abonnement & { plan: PlanAbonnement },
-) {
+export function mapAdminAbonnement(row: Abonnement & { plan: PlanAbonnement }) {
   return {
     id: row.id,
     paiement_id: row.paiement_id,

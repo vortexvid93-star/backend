@@ -21,7 +21,8 @@ export class ChallengeParticipationBriefSchema {
 }
 
 export class ChallengeParticipationSchema extends ChallengeParticipationBriefSchema {
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_completion: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_completion: string | null;
 }
 
 export class ChallengeListItemSchema {
@@ -34,12 +35,16 @@ export class ChallengeListItemSchema {
   @ApiProperty({ format: 'date-time' }) date_debut: string;
   @ApiProperty({ format: 'date-time' }) date_fin: string;
   @ApiProperty({ type: BadgeSummarySchema }) badge: BadgeSummarySchema;
-  @ApiPropertyOptional({ type: ChallengeParticipationBriefSchema, nullable: true })
+  @ApiPropertyOptional({
+    type: ChallengeParticipationBriefSchema,
+    nullable: true,
+  })
   ma_participation: ChallengeParticipationBriefSchema | null;
 }
 
 export class PaginatedChallengeListSchema {
-  @ApiProperty({ type: [ChallengeListItemSchema] }) data: ChallengeListItemSchema[];
+  @ApiProperty({ type: [ChallengeListItemSchema] })
+  data: ChallengeListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -53,9 +58,14 @@ export class ChallengeDetailSchema {
   @ApiProperty({ format: 'date-time' }) date_debut: string;
   @ApiProperty({ format: 'date-time' }) date_fin: string;
   @ApiProperty({ type: BadgeSummarySchema }) badge: BadgeSummarySchema;
-  @ApiPropertyOptional({ type: CategorieBriefSchema, nullable: true }) categorie: CategorieBriefSchema | null;
-  @ApiPropertyOptional({ type: AuteurBriefSchema, nullable: true }) auteur: AuteurBriefSchema | null;
-  @ApiPropertyOptional({ nullable: true }) livre: { id: string; titre: string } | null;
+  @ApiPropertyOptional({ type: CategorieBriefSchema, nullable: true })
+  categorie: CategorieBriefSchema | null;
+  @ApiPropertyOptional({ type: AuteurBriefSchema, nullable: true })
+  auteur: AuteurBriefSchema | null;
+  @ApiPropertyOptional({ nullable: true }) livre: {
+    id: string;
+    titre: string;
+  } | null;
   @ApiPropertyOptional({ type: ChallengeParticipationSchema, nullable: true })
   ma_participation: ChallengeParticipationSchema | null;
 }
@@ -80,8 +90,11 @@ export class BadgeDetailDefiActifSchema {
 }
 
 export class BadgeDetailSchema extends BadgeListItemSchema {
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) obtenu_le: string | null;
-  @ApiProperty({ type: [BadgeDetailDefiActifSchema] }) defis_actifs: BadgeDetailDefiActifSchema[];
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) obtenu_le:
+    | string
+    | null;
+  @ApiProperty({ type: [BadgeDetailDefiActifSchema] })
+  defis_actifs: BadgeDetailDefiActifSchema[];
 }
 
 export class BadgePathParticipationSchema {
@@ -104,13 +117,16 @@ export class BadgePathDefiSchema {
 export class BadgePathHistoriqueSchema {
   @ApiProperty({ format: 'uuid' }) defi_id: string;
   @ApiProperty() titre: string;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_completion: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_completion: string | null;
 }
 
 export class BadgePathSchema {
   @ApiProperty({ type: BadgeSummarySchema }) badge: BadgeSummarySchema;
   @ApiProperty() obtenu: boolean;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) obtenu_le: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) obtenu_le:
+    | string
+    | null;
   @ApiProperty({ type: [BadgePathDefiSchema] }) defis: BadgePathDefiSchema[];
   @ApiProperty({ type: [BadgePathHistoriqueSchema] })
   defis_completes_historique: BadgePathHistoriqueSchema[];
@@ -123,7 +139,8 @@ export class BadgeNextDefiBriefSchema {
 
 export class BadgeNextItemSchema {
   @ApiProperty({ type: BadgeSummarySchema }) badge: BadgeSummarySchema;
-  @ApiProperty({ type: BadgeNextDefiBriefSchema }) defi: BadgeNextDefiBriefSchema;
+  @ApiProperty({ type: BadgeNextDefiBriefSchema })
+  defi: BadgeNextDefiBriefSchema;
   @ApiProperty() pourcentage: number;
   @ApiPropertyOptional() progression?: number;
   @ApiPropertyOptional() objectif_valeur?: number;
@@ -131,7 +148,8 @@ export class BadgeNextItemSchema {
 }
 
 export class BadgeNextResponseSchema {
-  @ApiPropertyOptional({ type: BadgeNextItemSchema, nullable: true }) prochain: BadgeNextItemSchema | null;
+  @ApiPropertyOptional({ type: BadgeNextItemSchema, nullable: true })
+  prochain: BadgeNextItemSchema | null;
 }
 
 export class ChallengeStatsSchema {
@@ -149,7 +167,8 @@ export class ChallengeProgressActionCibleSchema {
 export class ChallengeProgressActionSchema {
   @ApiProperty() code: string;
   @ApiProperty() message: string;
-  @ApiPropertyOptional({ type: ChallengeProgressActionCibleSchema }) cible?: ChallengeProgressActionCibleSchema;
+  @ApiPropertyOptional({ type: ChallengeProgressActionCibleSchema })
+  cible?: ChallengeProgressActionCibleSchema;
 }
 
 export class ChallengeProgressSchema {
@@ -163,7 +182,8 @@ export class ChallengeProgressSchema {
   @ApiPropertyOptional({ type: ChallengeParticipationSchema, nullable: true })
   participation: ChallengeParticipationSchema | null;
   @ApiProperty() pourcentage: number;
-  @ApiProperty({ type: ChallengeProgressActionSchema }) prochaine_action: ChallengeProgressActionSchema;
+  @ApiProperty({ type: ChallengeProgressActionSchema })
+  prochaine_action: ChallengeProgressActionSchema;
   @ApiProperty({ type: BadgeSummarySchema }) badge: BadgeSummarySchema;
 }
 
@@ -174,7 +194,10 @@ export class PaginatedBadgeListSchema {
 
 export class GamificationOverviewSchema {
   @ApiProperty() points: number;
-  @ApiProperty({ type: [ChallengeListItemSchema] }) defis_actifs: ChallengeListItemSchema[];
-  @ApiProperty({ type: [BadgeSummarySchema] }) badges_recents: BadgeSummarySchema[];
-  @ApiPropertyOptional({ type: BadgeSummarySchema, nullable: true }) prochain_badge: BadgeSummarySchema | null;
+  @ApiProperty({ type: [ChallengeListItemSchema] })
+  defis_actifs: ChallengeListItemSchema[];
+  @ApiProperty({ type: [BadgeSummarySchema] })
+  badges_recents: BadgeSummarySchema[];
+  @ApiPropertyOptional({ type: BadgeSummarySchema, nullable: true })
+  prochain_badge: BadgeSummarySchema | null;
 }

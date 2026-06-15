@@ -40,10 +40,7 @@ export class PawaPayWebhooksController {
 
   @Post('deposits')
   @HttpCode(HttpStatus.OK)
-  depositCallback(
-    @Body() body: Record<string, unknown>,
-    @Res() res: Response,
-  ) {
+  depositCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
     const status = String(body.status ?? '?');
     const depositId = String(body.depositId ?? '?');
     const clientRef = String(body.clientReferenceId ?? '?');
@@ -57,10 +54,7 @@ export class PawaPayWebhooksController {
 
   @Post('payouts')
   @HttpCode(HttpStatus.OK)
-  payoutCallback(
-    @Body() body: Record<string, unknown>,
-    @Res() res: Response,
-  ) {
+  payoutCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
     res.status(HttpStatus.OK).send();
     this.logger.debug(
       `Callback payout (ignoré métier) status=${String(body.status ?? '?')} payoutId=${String(body.payoutId ?? '?')}`,
@@ -69,10 +63,7 @@ export class PawaPayWebhooksController {
 
   @Post('refunds')
   @HttpCode(HttpStatus.OK)
-  refundCallback(
-    @Body() body: Record<string, unknown>,
-    @Res() res: Response,
-  ) {
+  refundCallback(@Body() body: Record<string, unknown>, @Res() res: Response) {
     res.status(HttpStatus.OK).send();
     this.logger.debug(
       `Callback refund (ignoré métier) status=${String(body.status ?? '?')} refundId=${String(body.refundId ?? '?')}`,

@@ -36,10 +36,13 @@ export class AbonnementActifSchema {
 export class PersonneSchema {
   @ApiProperty() nom: string;
   @ApiProperty() prenom: string;
-  @ApiPropertyOptional({ nullable: true, format: 'date' }) date_naissance: string | null;
+  @ApiPropertyOptional({ nullable: true, format: 'date' }) date_naissance:
+    | string
+    | null;
   @ApiPropertyOptional({ nullable: true }) photo_profil_url: string | null;
   @ApiPropertyOptional({ nullable: true }) bio: string | null;
-  @ApiPropertyOptional({ enum: GenrePersonne, nullable: true }) genre: GenrePersonne | null;
+  @ApiPropertyOptional({ enum: GenrePersonne, nullable: true })
+  genre: GenrePersonne | null;
   @ApiPropertyOptional({ nullable: true }) ecole: string | null;
   @ApiPropertyOptional({ nullable: true }) niveau: string | null;
   @ApiProperty() points: number;
@@ -106,7 +109,8 @@ export class ProfileAuthCoreSchema {
   @ApiProperty() email_verified: boolean;
   @ApiPropertyOptional({ nullable: true }) numero_telephone: string | null;
   @ApiProperty({ format: 'date-time' }) date_inscription: string;
-  @ApiPropertyOptional({ nullable: true, format: 'date-time' }) derniere_connexion: string | null;
+  @ApiPropertyOptional({ nullable: true, format: 'date-time' })
+  derniere_connexion: string | null;
 }
 
 export class BibliothequeTypeSchema {

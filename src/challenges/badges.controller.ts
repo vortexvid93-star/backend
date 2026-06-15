@@ -33,10 +33,7 @@ export class BadgesController {
   @Get()
   @BadgesListDocs()
   @HttpCode(HttpStatus.OK)
-  listBadges(
-    @CurrentUser() user: JwtPayload,
-    @Query() query: BadgesQueryDto,
-  ) {
+  listBadges(@CurrentUser() user: JwtPayload, @Query() query: BadgesQueryDto) {
     return this.badgesService.listBadges(user.sub, query);
   }
 

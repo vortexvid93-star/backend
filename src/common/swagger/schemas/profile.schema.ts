@@ -64,7 +64,10 @@ export class DashboardDefisSchema {
   @ApiProperty() en_cours: number;
   @ApiProperty() completes: number;
   @ApiProperty() echoques: number;
-  @ApiPropertyOptional({ type: DashboardProchaineEcheanceSchema, nullable: true })
+  @ApiPropertyOptional({
+    type: DashboardProchaineEcheanceSchema,
+    nullable: true,
+  })
   prochaine_echeance: DashboardProchaineEcheanceSchema | null;
 }
 
@@ -85,7 +88,8 @@ export class ProfileDashboardSchema {
   @ApiProperty({ type: DashboardStatsSchema }) stats: DashboardStatsSchema;
   @ApiProperty({ type: DashboardDefisSchema }) defis: DashboardDefisSchema;
   @ApiProperty() nb_notifications_non_lues: number;
-  @ApiProperty({ type: DashboardRecommandationsSchema }) recommandations: DashboardRecommandationsSchema;
+  @ApiProperty({ type: DashboardRecommandationsSchema })
+  recommandations: DashboardRecommandationsSchema;
   @ApiPropertyOptional({ type: DashboardBadgeRecentSchema, nullable: true })
   badge_recent: DashboardBadgeRecentSchema | null;
 }
@@ -100,18 +104,22 @@ export class ReadingLivreBriefSchema {
 
 export class ProfileReadingItemSchema {
   @ApiProperty({ format: 'uuid' }) progression_id: string;
-  @ApiProperty({ type: ReadingLivreBriefSchema }) livre: ReadingLivreBriefSchema;
+  @ApiProperty({ type: ReadingLivreBriefSchema })
+  livre: ReadingLivreBriefSchema;
   @ApiProperty() page_actuelle: number;
   @ApiProperty() pourcentage: number;
   @ApiProperty() duree_lecture_min: number;
   @ApiProperty({ enum: StatutProgression }) statut: StatutProgression;
   @ApiProperty({ format: 'date-time' }) derniere_maj: string;
   @ApiProperty({ format: 'date-time' }) date_debut: string;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin:
+    | string
+    | null;
 }
 
 export class PaginatedProfileReadingSchema {
-  @ApiProperty({ type: [ProfileReadingItemSchema] }) data: ProfileReadingItemSchema[];
+  @ApiProperty({ type: [ProfileReadingItemSchema] })
+  data: ProfileReadingItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -132,7 +140,8 @@ export class ProfileActionSchema {
   @ApiProperty({ enum: ['haute', 'moyenne', 'basse'] }) priorite: string;
   @ApiProperty() titre: string;
   @ApiProperty() description: string;
-  @ApiPropertyOptional({ type: ProfileActionCibleSchema }) cible?: ProfileActionCibleSchema;
+  @ApiPropertyOptional({ type: ProfileActionCibleSchema })
+  cible?: ProfileActionCibleSchema;
 }
 
 export class ProfileActionsSchema {
@@ -169,14 +178,16 @@ export class ProfileActivityItemSchema {
   @ApiPropertyOptional() points?: number;
   @ApiPropertyOptional({ format: 'uuid' }) defi_id?: string;
   @ApiPropertyOptional() points_bonus?: number;
-  @ApiPropertyOptional({ type: ProfileActivityBadgeBriefSchema }) badge?: ProfileActivityBadgeBriefSchema;
+  @ApiPropertyOptional({ type: ProfileActivityBadgeBriefSchema })
+  badge?: ProfileActivityBadgeBriefSchema;
   @ApiPropertyOptional({ format: 'uuid' }) commentaire_id?: string;
   @ApiPropertyOptional() livre_titre?: string;
   @ApiPropertyOptional() extrait?: string;
 }
 
 export class PaginatedProfileActivitySchema {
-  @ApiProperty({ type: [ProfileActivityItemSchema] }) data: ProfileActivityItemSchema[];
+  @ApiProperty({ type: [ProfileActivityItemSchema] })
+  data: ProfileActivityItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -189,12 +200,14 @@ export class ProfileCommentLivreSchema {
 export class ProfileCommentItemSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty() contenu: string;
-  @ApiProperty({ type: ProfileCommentLivreSchema }) livre: ProfileCommentLivreSchema;
+  @ApiProperty({ type: ProfileCommentLivreSchema })
+  livre: ProfileCommentLivreSchema;
   @ApiProperty({ format: 'date-time' }) cree_le: string;
 }
 
 export class PaginatedProfileCommentsSchema {
-  @ApiProperty({ type: [ProfileCommentItemSchema] }) data: ProfileCommentItemSchema[];
+  @ApiProperty({ type: [ProfileCommentItemSchema] })
+  data: ProfileCommentItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -205,13 +218,15 @@ export class ProfileRatingLivreSchema {
 }
 
 export class ProfileRatingItemSchema {
-  @ApiProperty({ type: ProfileRatingLivreSchema }) livre: ProfileRatingLivreSchema;
+  @ApiProperty({ type: ProfileRatingLivreSchema })
+  livre: ProfileRatingLivreSchema;
   @ApiProperty() valeur: number;
   @ApiProperty({ format: 'date-time' }) note_le: string;
 }
 
 export class PaginatedProfileRatingsSchema {
-  @ApiProperty({ type: [ProfileRatingItemSchema] }) data: ProfileRatingItemSchema[];
+  @ApiProperty({ type: [ProfileRatingItemSchema] })
+  data: ProfileRatingItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -233,12 +248,15 @@ export class ProfileStatsReadingResumeSchema {
 }
 
 export class ProfileStatsReadingSchema {
-  @ApiProperty({ type: [ProfileStatsMoisSchema] }) livres_termines_par_mois: ProfileStatsMoisSchema[];
+  @ApiProperty({ type: [ProfileStatsMoisSchema] })
+  livres_termines_par_mois: ProfileStatsMoisSchema[];
   @ApiProperty() duree_lecture_totale_min: number;
   @ApiProperty() duree_moyenne_par_livre_termine_min: number;
-  @ApiProperty({ type: [ProfileStatsCategorieSchema] }) top_categories: ProfileStatsCategorieSchema[];
+  @ApiProperty({ type: [ProfileStatsCategorieSchema] })
+  top_categories: ProfileStatsCategorieSchema[];
   @ApiProperty() serie_lecture_jours: number;
-  @ApiProperty({ type: ProfileStatsReadingResumeSchema }) resume: ProfileStatsReadingResumeSchema;
+  @ApiProperty({ type: ProfileStatsReadingResumeSchema })
+  resume: ProfileStatsReadingResumeSchema;
 }
 
 export class ProfileStatsSocialSchema {
@@ -268,12 +286,14 @@ export class ProfileOwnedBadgeSchema extends BadgeSummarySchema {
 }
 
 export class ProfileOwnedBadgeItemSchema {
-  @ApiProperty({ type: ProfileOwnedBadgeSchema }) badge: ProfileOwnedBadgeSchema;
+  @ApiProperty({ type: ProfileOwnedBadgeSchema })
+  badge: ProfileOwnedBadgeSchema;
   @ApiProperty({ format: 'date-time' }) obtenu_le: string;
 }
 
 export class ProfileBadgesListSchema {
-  @ApiProperty({ type: [ProfileOwnedBadgeItemSchema] }) data: ProfileOwnedBadgeItemSchema[];
+  @ApiProperty({ type: [ProfileOwnedBadgeItemSchema] })
+  data: ProfileOwnedBadgeItemSchema[];
 }
 
 export class ProfileChallengeParticipationSummarySchema {
@@ -290,9 +310,15 @@ export class ProfileChallengesSummarySchema {
   @ApiProperty() en_cours: number;
   @ApiProperty() completes: number;
   @ApiProperty() echoques: number;
-  @ApiPropertyOptional({ type: ProfileChallengeParticipationSummarySchema, nullable: true })
+  @ApiPropertyOptional({
+    type: ProfileChallengeParticipationSummarySchema,
+    nullable: true,
+  })
   prochaine_echeance: ProfileChallengeParticipationSummarySchema | null;
-  @ApiPropertyOptional({ type: ProfileChallengeParticipationSummarySchema, nullable: true })
+  @ApiPropertyOptional({
+    type: ProfileChallengeParticipationSummarySchema,
+    nullable: true,
+  })
   defi_plus_avance: ProfileChallengeParticipationSummarySchema | null;
 }
 
@@ -308,18 +334,22 @@ export class ProfileMyChallengeDefiSchema {
   @ApiProperty() objectif_valeur: number;
   @ApiProperty() points_bonus: number;
   @ApiProperty({ format: 'date-time' }) date_fin: string;
-  @ApiProperty({ type: ProfileMyChallengeBadgeSchema }) badge: ProfileMyChallengeBadgeSchema;
+  @ApiProperty({ type: ProfileMyChallengeBadgeSchema })
+  badge: ProfileMyChallengeBadgeSchema;
 }
 
 export class ProfileMyChallengeItemSchema {
-  @ApiProperty({ type: ProfileMyChallengeDefiSchema }) defi: ProfileMyChallengeDefiSchema;
+  @ApiProperty({ type: ProfileMyChallengeDefiSchema })
+  defi: ProfileMyChallengeDefiSchema;
   @ApiProperty() progression: number;
   @ApiProperty({ enum: StatutUserDefi }) statut: StatutUserDefi;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_completion: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_completion: string | null;
 }
 
 export class PaginatedProfileMyChallengesSchema {
-  @ApiProperty({ type: [ProfileMyChallengeItemSchema] }) data: ProfileMyChallengeItemSchema[];
+  @ApiProperty({ type: [ProfileMyChallengeItemSchema] })
+  data: ProfileMyChallengeItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -335,10 +365,12 @@ export class ProfileMyParticipationDefiSchema {
 }
 
 export class ProfileMyParticipationSchema {
-  @ApiProperty({ type: ProfileMyParticipationDefiSchema }) defi: ProfileMyParticipationDefiSchema;
+  @ApiProperty({ type: ProfileMyParticipationDefiSchema })
+  defi: ProfileMyParticipationDefiSchema;
   @ApiProperty() progression: number;
   @ApiProperty({ enum: StatutUserDefi }) statut: StatutUserDefi;
   @ApiProperty() pourcentage: number;
   @ApiProperty() jours_restants: number;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_completion: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_completion: string | null;
 }

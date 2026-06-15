@@ -145,7 +145,11 @@ export class ChallengesService {
         if (daysLeft <= 14) score += 2;
         return { defi, score };
       })
-      .sort((a, b) => b.score - a.score || a.defi.date_fin.getTime() - b.defi.date_fin.getTime())
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.defi.date_fin.getTime() - b.defi.date_fin.getTime(),
+      )
       .slice(0, limit);
 
     return {
@@ -237,8 +241,7 @@ export class ChallengesService {
             defi.objectif_valeur,
           )
         : null,
-      est_actif:
-        defi.statut === StatutDefi.ACTIF && defi.date_fin > new Date(),
+      est_actif: defi.statut === StatutDefi.ACTIF && defi.date_fin > new Date(),
     };
   }
 
@@ -262,10 +265,7 @@ export class ChallengesService {
 
     const participation = defi.userdefis[0] ?? null;
     const pourcentage = participation
-      ? computeProgressPercent(
-          participation.progression,
-          defi.objectif_valeur,
-        )
+      ? computeProgressPercent(participation.progression, defi.objectif_valeur)
       : 0;
 
     const prochaine_action = await this.buildProchaineAction(
@@ -349,7 +349,9 @@ export class ChallengesService {
 
     return {
       livre: { id: livre.id, titre: livre.titre },
-      data: rows.map((row) => this.enrichListItem(row, row.userdefis[0] ?? null)),
+      data: rows.map((row) =>
+        this.enrichListItem(row, row.userdefis[0] ?? null),
+      ),
     };
   }
 
@@ -508,7 +510,10 @@ export class ChallengesService {
       };
     }
 
-    const restant = Math.max(0, defi.objectif_valeur - participation.progression);
+    const restant = Math.max(
+      0,
+      defi.objectif_valeur - participation.progression,
+    );
 
     switch (defi.type) {
       case TypeDefi.NB_LIVRES: {
@@ -526,7 +531,11 @@ export class ChallengesService {
           message: `Terminez encore ${restant} livre(s) pour compléter ce défi.`,
           restant,
           cible: enCours
-            ? { type: 'livre', id: enCours.livre.id, titre: enCours.livre.titre }
+            ? {
+                type: 'livre',
+                id: enCours.livre.id,
+                titre: enCours.livre.titre,
+              }
             : { type: 'catalogue', id: 'books' },
         };
       }

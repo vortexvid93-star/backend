@@ -105,7 +105,12 @@ export class BooksAccessService {
     });
 
     if (!row) {
-      return { token: null, expires_at: null, type_acces: null, stream_url: null };
+      return {
+        token: null,
+        expires_at: null,
+        type_acces: null,
+        stream_url: null,
+      };
     }
 
     const expiresInSec = Math.max(
@@ -158,12 +163,14 @@ export class BooksAccessService {
         // createMany + skipDuplicates génère INSERT … ON CONFLICT DO NOTHING (atomique)
         // Résiste aux appels simultanés sans lever d'exception de contrainte unique
         const created = await tx.progressionLecture.createMany({
-          data: [{
-            auth_id: authId,
-            livre_id: livreId,
-            page_actuelle: 0,
-            statut: StatutProgression.EN_COURS,
-          }],
+          data: [
+            {
+              auth_id: authId,
+              livre_id: livreId,
+              page_actuelle: 0,
+              statut: StatutProgression.EN_COURS,
+            },
+          ],
           skipDuplicates: true,
         });
         progressionCreee = created.count > 0;
@@ -287,7 +294,14 @@ export class BooksAccessService {
       }
 
       if (validateOnly) {
-        return this.resolveResourceUrl(livre, tokenRow.type_acces, tx, authId, livreId, false);
+        return this.resolveResourceUrl(
+          livre,
+          tokenRow.type_acces,
+          tx,
+          authId,
+          livreId,
+          false,
+        );
       }
 
       const marked = await tx.tokenLecture.updateMany({
@@ -303,7 +317,14 @@ export class BooksAccessService {
         throw new GoneException('Token expiré ou déjà utilisé.');
       }
 
-      return this.resolveResourceUrl(livre, tokenRow.type_acces, tx, authId, livreId, true);
+      return this.resolveResourceUrl(
+        livre,
+        tokenRow.type_acces,
+        tx,
+        authId,
+        livreId,
+        true,
+      );
     });
 
     return redirectUrl;

@@ -8,5 +8,4 @@ export const CRON_JOB_NAMES = {
   YOUTUBE_SYNC: 'youtube-sync',
 } as const;
 
-export type CronJobName =
-  (typeof CRON_JOB_NAMES)[keyof typeof CRON_JOB_NAMES];
+export type CronJobName = (typeof CRON_JOB_NAMES)[keyof typeof CRON_JOB_NAMES];

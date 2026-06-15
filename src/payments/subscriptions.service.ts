@@ -1,8 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  PlanType,
-  StatutPaiement,
-} from '../../generated/prisma/enums';
+import { PlanType, StatutPaiement } from '../../generated/prisma/enums';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
@@ -100,7 +97,8 @@ export class SubscriptionsService {
             montant: Number(pending.montant),
           }
         : null,
-      expire_bientot: jours > 0 && jours <= PAYMENTS_CONSTANTS.EXPIRE_BIENTOT_JOURS,
+      expire_bientot:
+        jours > 0 && jours <= PAYMENTS_CONSTANTS.EXPIRE_BIENTOT_JOURS,
       plan_superieur_disponible: this.findHigherPlan(
         plans.data,
         abonnement.plan.plan,
@@ -171,10 +169,11 @@ export class SubscriptionsService {
     return {
       plan_actuel: currentType,
       data: plans.map((item) => {
-        let action: 'ACTUEL' | 'UPGRADE' | 'DOWNGRADE' | 'SOUSCRIRE' = 'SOUSCRIRE';
+        let action: 'ACTUEL' | 'UPGRADE' | 'DOWNGRADE' | 'SOUSCRIRE' =
+          'SOUSCRIRE';
         if (currentType) {
           if (item.plan === currentType) action = 'ACTUEL';
-          else if (PLAN_RANK[item.plan as PlanType] > PLAN_RANK[currentType]) {
+          else if (PLAN_RANK[item.plan] > PLAN_RANK[currentType]) {
             action = 'UPGRADE';
           } else {
             action = 'DOWNGRADE';
@@ -184,8 +183,7 @@ export class SubscriptionsService {
         return {
           ...item,
           action,
-          recommande:
-            action === 'UPGRADE' && item.plan === PlanType.ANNUEL,
+          recommande: action === 'UPGRADE' && item.plan === PlanType.ANNUEL,
         };
       }),
     };
@@ -216,18 +214,14 @@ export class SubscriptionsService {
         scenario = 'PROLONGATION';
         date_debut_prevue = current.date_debut;
         date_fin_prevue = new Date(current.date_fin);
-        date_fin_prevue.setDate(
-          date_fin_prevue.getDate() + plan.duree_jours,
-        );
+        date_fin_prevue.setDate(date_fin_prevue.getDate() + plan.duree_jours);
         type_renouvellement = 'RENOUVELLEMENT';
         message_notification = `Votre abonnement ${plan.plan} sera prolongé jusqu'au ${date_fin_prevue.toISOString().slice(0, 10)}.`;
       } else {
         scenario = 'FILE_ATTENTE';
         date_debut_prevue = new Date(current.date_fin);
         date_fin_prevue = new Date(date_debut_prevue);
-        date_fin_prevue.setDate(
-          date_fin_prevue.getDate() + plan.duree_jours,
-        );
+        date_fin_prevue.setDate(date_fin_prevue.getDate() + plan.duree_jours);
         type_renouvellement =
           comparePlans(plan.plan, current.plan.plan) === 'UPGRADE'
             ? 'UPGRADE'
@@ -303,8 +297,6 @@ export class SubscriptionsService {
     }
 
     const currentRank = PLAN_RANK[current];
-    return (
-      plans.find((p) => PLAN_RANK[p.plan as PlanType] > currentRank) ?? null
-    );
+    return plans.find((p) => PLAN_RANK[p.plan] > currentRank) ?? null;
   }
 }

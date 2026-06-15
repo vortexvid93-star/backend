@@ -9,7 +9,10 @@ export function resolvePawaPayApiBase(config: ConfigService): string {
     return explicit.replace(/\/$/, '');
   }
 
-  const mode = config.get<string>('PAWAPAY_MODE', 'sandbox').trim().toLowerCase();
+  const mode = config
+    .get<string>('PAWAPAY_MODE', 'sandbox')
+    .trim()
+    .toLowerCase();
   if (mode === 'production' || mode === 'prod' || mode === 'live') {
     return PRODUCTION_API;
   }

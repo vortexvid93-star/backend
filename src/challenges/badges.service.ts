@@ -108,7 +108,9 @@ export class BadgesService {
   async getBadgePath(authId: string, badgeId: string) {
     await this.engine.syncExpiredParticipations(authId);
 
-    const badge = await this.prisma.badge.findUnique({ where: { id: badgeId } });
+    const badge = await this.prisma.badge.findUnique({
+      where: { id: badgeId },
+    });
     if (!badge) {
       throw new NotFoundException('Badge introuvable.');
     }

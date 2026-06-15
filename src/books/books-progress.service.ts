@@ -38,7 +38,11 @@ export class BooksProgressService {
     return mapProgression(progression);
   }
 
-  async updateProgress(authId: string, livreId: string, dto: UpdateProgressDto) {
+  async updateProgress(
+    authId: string,
+    livreId: string,
+    dto: UpdateProgressDto,
+  ) {
     await assertActiveSubscription(this.prisma, authId);
 
     const progression = await this.prisma.progressionLecture.findUnique({
@@ -59,7 +63,8 @@ export class BooksProgressService {
     }
 
     // Utilise le nombre de pages du livre ; si absent, accepte l'indication du client (lecteur PDF)
-    const nombrePages = progression.livre.nombre_pages ?? dto.nombre_pages_hint ?? null;
+    const nombrePages =
+      progression.livre.nombre_pages ?? dto.nombre_pages_hint ?? null;
     const pageDemandee = dto.page_actuelle;
     const { pageCible, ajustee } = this.validatePageActuelle(
       pageDemandee,
@@ -166,7 +171,10 @@ export class BooksProgressService {
     return { pageCible: pageDemandee, ajustee: false };
   }
 
-  private computePourcentage(pageActuelle: number, nombrePages: number | null): number {
+  private computePourcentage(
+    pageActuelle: number,
+    nombrePages: number | null,
+  ): number {
     if (!nombrePages || nombrePages <= 0) return 0;
     const raw = Math.round((pageActuelle / nombrePages) * 10000) / 100;
     return Math.min(100, raw);
@@ -191,5 +199,4 @@ export class BooksProgressService {
       );
     }
   }
-
 }

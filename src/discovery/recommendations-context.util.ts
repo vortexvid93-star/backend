@@ -30,15 +30,15 @@ export function buildRecommendationContexte(
   livre: {
     titre: string;
     appartenir: { categorie: { id: string; nom: string } }[];
-    livre_auteurs: { auteur: { id: string; nom: string; prenom: string | null } }[];
+    livre_auteurs: {
+      auteur: { id: string; nom: string; prenom: string | null };
+    }[];
   },
   ctx: RecommendationContext,
   hint?: { categorie_nom?: string; auteur_nom?: string },
 ): { type: string; libelle: string } | null {
   if (raison === RaisonRecommandation.SAME_GENRE) {
-    const catIds = new Set(
-      livre.appartenir.map((a) => a.categorie.id),
-    );
+    const catIds = new Set(livre.appartenir.map((a) => a.categorie.id));
     const source = ctx.finishedBooks.find((b) =>
       b.categorieIds.some((id) => catIds.has(id)),
     );
@@ -63,9 +63,9 @@ export function buildRecommendationContexte(
       b.auteurIds.some((id) => autIds.has(id)),
     );
     const auteurNom =
-      hint?.auteur_nom ??
+      (hint?.auteur_nom ??
       source?.auteurNoms[0] ??
-      livre.livre_auteurs[0]?.auteur.prenom
+      livre.livre_auteurs[0]?.auteur.prenom)
         ? `${livre.livre_auteurs[0].auteur.prenom} ${livre.livre_auteurs[0].auteur.nom}`
         : livre.livre_auteurs[0]?.auteur.nom;
     if (auteurNom && source) {

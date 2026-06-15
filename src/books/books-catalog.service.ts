@@ -83,10 +83,7 @@ export class BooksCatalogService {
 
     return {
       data: result.rows.map((livre) =>
-        mapLivreLibraryItemWithUser(
-          livre,
-          progressionByLivre.get(livre.id),
-        ),
+        mapLivreLibraryItemWithUser(livre, progressionByLivre.get(livre.id)),
       ),
       meta: buildPaginationMeta(page, limit, result.total),
     };
@@ -123,9 +120,7 @@ export class BooksCatalogService {
     ]);
 
     return {
-      data: rows.map((row) =>
-        mapLivreLibraryItemWithUser(row.livre, row),
-      ),
+      data: rows.map((row) => mapLivreLibraryItemWithUser(row.livre, row)),
       meta: buildPaginationMeta(page, limit, total),
     };
   }

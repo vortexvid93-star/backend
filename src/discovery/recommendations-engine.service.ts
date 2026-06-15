@@ -82,9 +82,7 @@ export class RecommendationsEngineService {
       merged,
       ctx.recentSearchTerms,
     );
-    const top = boosted
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit);
+    const top = boosted.sort((a, b) => b.score - a.score).slice(0, limit);
 
     const removed = await this.prisma.recommandation.deleteMany({
       where: {
@@ -200,10 +198,7 @@ export class RecommendationsEngineService {
         ...candidates,
         ...(await this.collectPopularCandidates(excluded)),
         ...(await this.collectTrendingCandidates(excluded)),
-        ...(await this.collectSameTypeCandidates(
-          excluded,
-          livre.type_livre,
-        )),
+        ...(await this.collectSameTypeCandidates(excluded, livre.type_livre)),
       ]);
     }
 
@@ -274,13 +269,11 @@ export class RecommendationsEngineService {
       const overlap = livre.appartenir.filter((a) =>
         categorieIds.has(a.categorie_id),
       ).length;
-      const catNom = overlap > 0 ? livre.appartenir[0]?.categorie.nom : undefined;
+      const catNom =
+        overlap > 0 ? livre.appartenir[0]?.categorie.nom : undefined;
       return {
         livre_id: livre.id,
-        score: Math.min(
-          C.SCORE_MAX,
-          0.72 + Math.min(overlap, 5) * 0.04,
-        ),
+        score: Math.min(C.SCORE_MAX, 0.72 + Math.min(overlap, 5) * 0.04),
         raison: RaisonRecommandation.SAME_GENRE,
         hint: catNom ? { categorie_nom: catNom } : undefined,
       };
@@ -349,15 +342,11 @@ export class RecommendationsEngineService {
       }));
     }
 
-    const maxTerminees = Math.max(
-      1,
-      ...stats.map((s) => s.nb_terminees),
-    );
+    const maxTerminees = Math.max(1, ...stats.map((s) => s.nb_terminees));
 
     return stats.map((s) => {
       const ratio = s.nb_terminees / maxTerminees;
-      const notePart =
-        s.note_moyenne != null ? (s.note_moyenne / 5) * 0.15 : 0;
+      const notePart = s.note_moyenne != null ? (s.note_moyenne / 5) * 0.15 : 0;
       return {
         livre_id: s.livre_id,
         score: Math.min(C.SCORE_MAX, 0.58 + ratio * 0.32 + notePart),
@@ -403,10 +392,7 @@ export class RecommendationsEngineService {
 
     return grouped.map((g) => ({
       livre_id: g.livre_id,
-      score: Math.min(
-        C.SCORE_MAX,
-        0.6 + (g._count.livre_id / maxCount) * 0.35,
-      ),
+      score: Math.min(C.SCORE_MAX, 0.6 + (g._count.livre_id / maxCount) * 0.35),
       raison: RaisonRecommandation.TRENDING,
     }));
   }
@@ -451,6 +437,8 @@ export class RecommendationsEngineService {
   }
 
   private toDecimalScore(score: number): Prisma.Decimal {
-    return new Prisma.Decimal(Math.min(C.SCORE_MAX, Math.max(0, score)).toFixed(3));
+    return new Prisma.Decimal(
+      Math.min(C.SCORE_MAX, Math.max(0, score)).toFixed(3),
+    );
   }
 }

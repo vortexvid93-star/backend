@@ -79,10 +79,7 @@ export class ProfileController {
   @Get('reading')
   @ProfileReadingDocs()
   @HttpCode(HttpStatus.OK)
-  getReading(
-    @CurrentUser() user: JwtPayload,
-    @Query() query: ReadingQueryDto,
-  ) {
+  getReading(@CurrentUser() user: JwtPayload, @Query() query: ReadingQueryDto) {
     return this.profileService.getReading(user.sub, query);
   }
 
@@ -137,7 +134,8 @@ export class ProfileController {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'Image JPEG, PNG ou WebP (taille max selon configuration serveur).',
+          description:
+            'Image JPEG, PNG ou WebP (taille max selon configuration serveur).',
         },
       },
     },

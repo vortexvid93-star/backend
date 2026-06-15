@@ -11,7 +11,10 @@ export class Reset7jStatsJob {
    * Recalcule nb_lectures_7j (fenêtre glissante 7 jours) à partir des accès lecture.
    * Aligné avec la rétention des `token_lecture` (7 jours, voir cleanup-token-lecture).
    */
-  async run(): Promise<{ livres_mis_a_jour: number; total_lectures_7j: number }> {
+  async run(): Promise<{
+    livres_mis_a_jour: number;
+    total_lectures_7j: number;
+  }> {
     const since = getTokenLectureRetentionCutoff();
 
     const grouped = await this.prisma.tokenLecture.groupBy({
@@ -58,9 +61,10 @@ export class Reset7jStatsJob {
     });
 
     return {
-      livres_mis_a_jour: stats.length + grouped.filter(
-        (g) => !stats.some((s) => s.livre_id === g.livre_id),
-      ).length,
+      livres_mis_a_jour:
+        stats.length +
+        grouped.filter((g) => !stats.some((s) => s.livre_id === g.livre_id))
+          .length,
       total_lectures_7j: totalLectures7j,
     };
   }

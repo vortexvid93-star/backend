@@ -33,10 +33,7 @@ export class OtpService {
     return randomInt(0, 1_000_000).toString().padStart(6, '0');
   }
 
-  async assertGenerationRateLimit(
-    email: string,
-    type: OtpType,
-  ): Promise<void> {
+  async assertGenerationRateLimit(email: string, type: OtpType): Promise<void> {
     const since = new Date(
       Date.now() - AUTH_CONSTANTS.OTP_GEN_WINDOW_MINUTES * 60 * 1000,
     );

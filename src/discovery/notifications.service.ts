@@ -52,9 +52,7 @@ export class NotificationsService {
     }
 
     if (row.auth_id !== authId) {
-      throw new ForbiddenException(
-        "Notification d'un autre utilisateur.",
-      );
+      throw new ForbiddenException("Notification d'un autre utilisateur.");
     }
 
     const updated = await this.prisma.notification.update({

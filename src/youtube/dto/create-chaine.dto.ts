@@ -1,11 +1,19 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateChaineDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   @Matches(/^UC[\w-]{22}$/, {
-    message: 'channel_id doit commencer par UC et faire 24 caractères (ex : UCxxxxxxxxxxxxxxxxxxxxxx).',
+    message:
+      'channel_id doit commencer par UC et faire 24 caractères (ex : UCxxxxxxxxxxxxxxxxxxxxxx).',
   })
   channel_id: string;
 

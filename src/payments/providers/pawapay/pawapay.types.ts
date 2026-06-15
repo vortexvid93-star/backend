@@ -1,4 +1,7 @@
-export type PawaPayInitiationStatus = 'ACCEPTED' | 'REJECTED' | 'DUPLICATE_IGNORED';
+export type PawaPayInitiationStatus =
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'DUPLICATE_IGNORED';
 
 export type PawaPayDepositStatus =
   | 'COMPLETED'

@@ -12,7 +12,10 @@ export class PaginationMetaSchema {
   @ApiProperty({ example: 20, description: 'Nombre d’éléments par page.' })
   limit: number;
 
-  @ApiProperty({ example: 142, description: 'Nombre total d’éléments correspondant aux filtres.' })
+  @ApiProperty({
+    example: 142,
+    description: 'Nombre total d’éléments correspondant aux filtres.',
+  })
   total: number;
 
   @ApiProperty({ example: 8, description: 'Nombre total de pages.' })

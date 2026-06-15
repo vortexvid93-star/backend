@@ -59,12 +59,16 @@ export function resolveDefiTargetIds(
 
 export function assertDefiDates(dateDebut: Date, dateFin: Date): void {
   if (dateFin <= dateDebut) {
-    throw new BadRequestException('date_fin doit être postérieure à date_debut.');
+    throw new BadRequestException(
+      'date_fin doit être postérieure à date_debut.',
+    );
   }
 }
 
 export function assertObjectifPositif(objectif: number): void {
   if (objectif <= 0) {
-    throw new BadRequestException('objectif_valeur doit être strictement positif.');
+    throw new BadRequestException(
+      'objectif_valeur doit être strictement positif.',
+    );
   }
 }

@@ -42,11 +42,13 @@ export class SubscriptionHistoryItemSchema {
   @ApiProperty() montant: number;
   @ApiProperty() devise: string;
   @ApiProperty({ format: 'date-time' }) date: string;
-  @ApiPropertyOptional({ type: PlanSummarySchema, nullable: true }) plan: PlanSummarySchema | null;
+  @ApiPropertyOptional({ type: PlanSummarySchema, nullable: true })
+  plan: PlanSummarySchema | null;
 }
 
 export class PaginatedSubscriptionHistorySchema {
-  @ApiProperty({ type: [SubscriptionHistoryItemSchema] }) data: SubscriptionHistoryItemSchema[];
+  @ApiProperty({ type: [SubscriptionHistoryItemSchema] })
+  data: SubscriptionHistoryItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -57,15 +59,21 @@ export class PaymentInitSchema {
   @ApiPropertyOptional() channel_ussd?: string;
   @ApiPropertyOptional({ enum: StatutPaiement }) statut?: StatutPaiement;
   @ApiPropertyOptional() message?: string;
-  @ApiPropertyOptional({ type: Object }) pawapay?: { deposit_id?: string; initiation_accepted?: boolean };
+  @ApiPropertyOptional({ type: Object }) pawapay?: {
+    deposit_id?: string;
+    initiation_accepted?: boolean;
+  };
 }
 
 export class PaymentStatusSchema {
   @ApiProperty({ enum: StatutPaiement }) statut: StatutPaiement;
   @ApiProperty() message: string;
-  @ApiPropertyOptional({ type: PlanSummarySchema, nullable: true }) plan: PlanSummarySchema | null;
-  @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true }) abonnement_lie: AbonnementActifSchema | null;
-  @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true }) abonnement_actuel: AbonnementActifSchema | null;
+  @ApiPropertyOptional({ type: PlanSummarySchema, nullable: true })
+  plan: PlanSummarySchema | null;
+  @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true })
+  abonnement_lie: AbonnementActifSchema | null;
+  @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true })
+  abonnement_actuel: AbonnementActifSchema | null;
 }
 
 export class PaymentCheckoutPreviewSchema {

@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
 import { StatutPlan } from '../../../../generated/prisma/enums';
 import { MIN_PLAN_PRIX_XOF } from '../admin-plans.constants';
 

@@ -17,7 +17,11 @@ import {
   TypeRenouvellement,
 } from '../../../../generated/prisma/enums';
 import { PaginationMetaSchema } from './common.schema';
-import { AbonnementActifSchema, AuteurBriefSchema, CategorieBriefSchema } from './shared.schema';
+import {
+  AbonnementActifSchema,
+  AuteurBriefSchema,
+  CategorieBriefSchema,
+} from './shared.schema';
 
 export class AdminBookListItemSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
@@ -30,11 +34,13 @@ export class AdminBookListItemSchema {
   @ApiProperty() nb_lectures: number;
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
   @ApiProperty({ type: [AuteurBriefSchema] }) auteurs: AuteurBriefSchema[];
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
 }
 
 export class PaginatedAdminBookListSchema {
-  @ApiProperty({ type: [AdminBookListItemSchema] }) data: AdminBookListItemSchema[];
+  @ApiProperty({ type: [AdminBookListItemSchema] })
+  data: AdminBookListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -52,14 +58,17 @@ export class AdminUserListItemSchema {
   @ApiProperty({ enum: AuthProvider }) auth_provider: AuthProvider;
   @ApiProperty() email_verified: boolean;
   @ApiProperty({ format: 'date-time' }) date_inscription: string;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) derniere_connexion: string | null;
-  @ApiProperty({ type: AdminUserListPersonneSchema }) personne: AdminUserListPersonneSchema;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  derniere_connexion: string | null;
+  @ApiProperty({ type: AdminUserListPersonneSchema })
+  personne: AdminUserListPersonneSchema;
   @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true })
   abonnement_actif: AbonnementActifSchema | null;
 }
 
 export class PaginatedAdminUserListSchema {
-  @ApiProperty({ type: [AdminUserListItemSchema] }) data: AdminUserListItemSchema[];
+  @ApiProperty({ type: [AdminUserListItemSchema] })
+  data: AdminUserListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -81,18 +90,23 @@ export class AdminUserDetailPersonneSchema {
   @ApiPropertyOptional({ nullable: true }) ecole: string | null;
   @ApiPropertyOptional({ nullable: true }) niveau: string | null;
   @ApiProperty() points: number;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) deleted_at: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) deleted_at:
+    | string
+    | null;
 }
 
 export class AdminUserDetailAbonnementSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiPropertyOptional({ format: 'uuid', nullable: true }) paiement_id: string | null;
+  @ApiPropertyOptional({ format: 'uuid', nullable: true }) paiement_id:
+    | string
+    | null;
   @ApiProperty({ enum: PlanType }) plan: PlanType;
   @ApiProperty({ format: 'uuid' }) plan_id: string;
   @ApiProperty({ format: 'date-time' }) date_debut: string;
   @ApiProperty({ format: 'date-time' }) date_fin: string;
   @ApiProperty({ enum: StatutAbonnement }) statut: StatutAbonnement;
-  @ApiProperty({ enum: TypeRenouvellement }) type_renouvellement: TypeRenouvellement;
+  @ApiProperty({ enum: TypeRenouvellement })
+  type_renouvellement: TypeRenouvellement;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
   @ApiProperty({ format: 'date-time' }) updatedAt: string;
 }
@@ -112,10 +126,14 @@ export class AdminUserDetailPaiementSchema {
 }
 
 export class AdminUserDetailSchema {
-  @ApiProperty({ type: AdminUserDetailAuthSchema }) auth: AdminUserDetailAuthSchema;
-  @ApiProperty({ type: AdminUserDetailPersonneSchema }) personne: AdminUserDetailPersonneSchema;
-  @ApiPropertyOptional({ type: [AdminUserDetailAbonnementSchema] }) abonnements?: AdminUserDetailAbonnementSchema[];
-  @ApiPropertyOptional({ type: [AdminUserDetailPaiementSchema] }) paiements?: AdminUserDetailPaiementSchema[];
+  @ApiProperty({ type: AdminUserDetailAuthSchema })
+  auth: AdminUserDetailAuthSchema;
+  @ApiProperty({ type: AdminUserDetailPersonneSchema })
+  personne: AdminUserDetailPersonneSchema;
+  @ApiPropertyOptional({ type: [AdminUserDetailAbonnementSchema] })
+  abonnements?: AdminUserDetailAbonnementSchema[];
+  @ApiPropertyOptional({ type: [AdminUserDetailPaiementSchema] })
+  paiements?: AdminUserDetailPaiementSchema[];
 }
 
 export class AdminPaymentAuthBriefSchema {
@@ -135,12 +153,15 @@ export class AdminPaymentListItemSchema {
   @ApiProperty() devise: string;
   @ApiPropertyOptional({ nullable: true }) operateur: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
-  @ApiProperty({ type: AdminPaymentAuthBriefSchema }) auth: AdminPaymentAuthBriefSchema;
-  @ApiProperty({ type: AdminPaymentPlanBriefSchema }) plan: AdminPaymentPlanBriefSchema;
+  @ApiProperty({ type: AdminPaymentAuthBriefSchema })
+  auth: AdminPaymentAuthBriefSchema;
+  @ApiProperty({ type: AdminPaymentPlanBriefSchema })
+  plan: AdminPaymentPlanBriefSchema;
 }
 
 export class PaginatedAdminPaymentListSchema {
-  @ApiProperty({ type: [AdminPaymentListItemSchema] }) data: AdminPaymentListItemSchema[];
+  @ApiProperty({ type: [AdminPaymentListItemSchema] })
+  data: AdminPaymentListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -159,7 +180,8 @@ export class AdminStatsDashboardSchema {
   @ApiProperty() nb_lectures_7j: number;
   @ApiProperty() nb_inscriptions_7j: number;
   @ApiProperty() nb_paiements_succes_7j: number;
-  @ApiProperty({ type: [AdminStatsTopLivreSchema] }) top_5_livres: AdminStatsTopLivreSchema[];
+  @ApiProperty({ type: [AdminStatsTopLivreSchema] })
+  top_5_livres: AdminStatsTopLivreSchema[];
 }
 
 /** Alias historique — même forme que `AdminStatsDashboardSchema`. */
@@ -173,7 +195,8 @@ export class AdminStatsBookLivreSchema {
 }
 
 export class AdminStatsBookListItemSchema {
-  @ApiProperty({ type: AdminStatsBookLivreSchema }) livre: AdminStatsBookLivreSchema;
+  @ApiProperty({ type: AdminStatsBookLivreSchema })
+  livre: AdminStatsBookLivreSchema;
   @ApiProperty() nb_lectures: number;
   @ApiProperty() nb_terminees: number;
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
@@ -182,7 +205,8 @@ export class AdminStatsBookListItemSchema {
 }
 
 export class PaginatedAdminStatsBooksSchema {
-  @ApiProperty({ type: [AdminStatsBookListItemSchema] }) data: AdminStatsBookListItemSchema[];
+  @ApiProperty({ type: [AdminStatsBookListItemSchema] })
+  data: AdminStatsBookListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -226,7 +250,8 @@ export class AdminStatsSearchTermSansResultatSchema {
 }
 
 export class AdminStatsSearchTermsSchema {
-  @ApiProperty({ type: [AdminStatsSearchTermItemSchema] }) data: AdminStatsSearchTermItemSchema[];
+  @ApiProperty({ type: [AdminStatsSearchTermItemSchema] })
+  data: AdminStatsSearchTermItemSchema[];
   @ApiProperty({ type: [AdminStatsSearchTermSansResultatSchema] })
   top_sans_resultats: AdminStatsSearchTermSansResultatSchema[];
 }
@@ -240,7 +265,8 @@ export class AdminAuteurListItemSchema {
 }
 
 export class PaginatedAdminAuteurListSchema {
-  @ApiProperty({ type: [AdminAuteurListItemSchema] }) data: AdminAuteurListItemSchema[];
+  @ApiProperty({ type: [AdminAuteurListItemSchema] })
+  data: AdminAuteurListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -253,7 +279,8 @@ export class AdminCategorieListItemSchema {
 }
 
 export class PaginatedAdminCategorieListSchema {
-  @ApiProperty({ type: [AdminCategorieListItemSchema] }) data: AdminCategorieListItemSchema[];
+  @ApiProperty({ type: [AdminCategorieListItemSchema] })
+  data: AdminCategorieListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -273,12 +300,15 @@ export class AdminCommentListItemSchema {
   @ApiProperty() contenu: string;
   @ApiProperty({ enum: StatutCommentaire }) statut: StatutCommentaire;
   @ApiProperty({ format: 'date-time' }) createdAt: string;
-  @ApiProperty({ type: AdminCommentLivreBriefSchema }) livre: AdminCommentLivreBriefSchema;
-  @ApiProperty({ type: AdminCommentAuteurBriefSchema }) auteur: AdminCommentAuteurBriefSchema;
+  @ApiProperty({ type: AdminCommentLivreBriefSchema })
+  livre: AdminCommentLivreBriefSchema;
+  @ApiProperty({ type: AdminCommentAuteurBriefSchema })
+  auteur: AdminCommentAuteurBriefSchema;
 }
 
 export class PaginatedAdminCommentListSchema {
-  @ApiProperty({ type: [AdminCommentListItemSchema] }) data: AdminCommentListItemSchema[];
+  @ApiProperty({ type: [AdminCommentListItemSchema] })
+  data: AdminCommentListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -294,21 +324,26 @@ export class AdminSubscriptionAuthPersonneSchema {
 
 export class AdminSubscriptionAuthBriefSchema {
   @ApiProperty({ format: 'email' }) email: string;
-  @ApiProperty({ type: AdminSubscriptionAuthPersonneSchema }) personne: AdminSubscriptionAuthPersonneSchema;
+  @ApiProperty({ type: AdminSubscriptionAuthPersonneSchema })
+  personne: AdminSubscriptionAuthPersonneSchema;
 }
 
 export class AdminSubscriptionListItemSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ type: AdminSubscriptionPlanBriefSchema }) plan: AdminSubscriptionPlanBriefSchema;
+  @ApiProperty({ type: AdminSubscriptionPlanBriefSchema })
+  plan: AdminSubscriptionPlanBriefSchema;
   @ApiProperty({ format: 'date-time' }) date_debut: string;
   @ApiProperty({ format: 'date-time' }) date_fin: string;
   @ApiProperty({ enum: StatutAbonnement }) statut: StatutAbonnement;
-  @ApiProperty({ enum: TypeRenouvellement }) type_renouvellement: TypeRenouvellement;
-  @ApiProperty({ type: AdminSubscriptionAuthBriefSchema }) auth: AdminSubscriptionAuthBriefSchema;
+  @ApiProperty({ enum: TypeRenouvellement })
+  type_renouvellement: TypeRenouvellement;
+  @ApiProperty({ type: AdminSubscriptionAuthBriefSchema })
+  auth: AdminSubscriptionAuthBriefSchema;
 }
 
 export class PaginatedAdminSubscriptionListSchema {
-  @ApiProperty({ type: [AdminSubscriptionListItemSchema] }) data: AdminSubscriptionListItemSchema[];
+  @ApiProperty({ type: [AdminSubscriptionListItemSchema] })
+  data: AdminSubscriptionListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -322,7 +357,8 @@ export class AdminLibraryListItemSchema {
 }
 
 export class PaginatedAdminLibraryListSchema {
-  @ApiProperty({ type: [AdminLibraryListItemSchema] }) data: AdminLibraryListItemSchema[];
+  @ApiProperty({ type: [AdminLibraryListItemSchema] })
+  data: AdminLibraryListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -337,7 +373,8 @@ export class AdminBadgeListItemSchema {
 }
 
 export class PaginatedAdminBadgeListSchema {
-  @ApiProperty({ type: [AdminBadgeListItemSchema] }) data: AdminBadgeListItemSchema[];
+  @ApiProperty({ type: [AdminBadgeListItemSchema] })
+  data: AdminBadgeListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -356,11 +393,13 @@ export class AdminChallengeListItemSchema {
   @ApiProperty() objectif_valeur: number;
   @ApiProperty() points_bonus: number;
   @ApiProperty() nb_participants: number;
-  @ApiProperty({ type: AdminChallengeBadgeBriefSchema }) badge: AdminChallengeBadgeBriefSchema;
+  @ApiProperty({ type: AdminChallengeBadgeBriefSchema })
+  badge: AdminChallengeBadgeBriefSchema;
 }
 
 export class PaginatedAdminChallengeListSchema {
-  @ApiProperty({ type: [AdminChallengeListItemSchema] }) data: AdminChallengeListItemSchema[];
+  @ApiProperty({ type: [AdminChallengeListItemSchema] })
+  data: AdminChallengeListItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -377,10 +416,12 @@ export class AdminChallengeParticipantAuthSchema {
 }
 
 export class AdminChallengeParticipantItemSchema {
-  @ApiProperty({ type: AdminChallengeParticipantAuthSchema }) auth: AdminChallengeParticipantAuthSchema;
+  @ApiProperty({ type: AdminChallengeParticipantAuthSchema })
+  auth: AdminChallengeParticipantAuthSchema;
   @ApiProperty() progression: number;
   @ApiProperty({ enum: StatutUserDefi }) statut: StatutUserDefi;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_completion: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_completion: string | null;
 }
 
 export class PaginatedAdminChallengeParticipantsSchema {
@@ -396,7 +437,8 @@ export class PaginatedAdminGenericSchema {
 }
 
 export class AdminBookCategoriesResponseSchema {
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
 }
 
 export class AdminBookAuthorsResponseSchema {

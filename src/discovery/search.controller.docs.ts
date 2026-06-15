@@ -54,7 +54,8 @@ export const SearchHistoryDeleteDocs = () =>
     historyIdParam(),
     ApiOperation({
       summary: 'Supprimer une entrée d’historique',
-      description: 'Retire une recherche de la liste. **Frontend** : swipe delete sur une suggestion.',
+      description:
+        'Retire une recherche de la liste. **Frontend** : swipe delete sur une suggestion.',
     }),
     ApiOkResponse({ type: HistoriqueRechercheSchema }),
   );

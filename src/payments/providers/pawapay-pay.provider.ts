@@ -1,8 +1,4 @@
-import {
-  BadGatewayException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { toProviderAmount, toProviderCurrency } from '../currency.util';
@@ -60,10 +56,7 @@ export class PawaPayPayProvider implements PaymentProvider {
   }
 
   private getDefaultProvider(): string {
-    return this.config.get<string>(
-      'PAWAPAY_DEFAULT_PROVIDER',
-      'MTN_MOMO_COG',
-    );
+    return this.config.get<string>('PAWAPAY_DEFAULT_PROVIDER', 'MTN_MOMO_COG');
   }
 
   private getDefaultCurrency(): string {
@@ -186,10 +179,8 @@ export class PawaPayPayProvider implements PaymentProvider {
         `checkDeposit ref=${ref_transaction} depositId=${decoded.depositId} pawaPayStatus=${depositStatus} → ${outcome}`,
       );
 
-      const phone =
-        deposit.payer?.accountDetails?.phoneNumber ?? undefined;
-      const op =
-        deposit.payer?.accountDetails?.provider ?? decoded.provider;
+      const phone = deposit.payer?.accountDetails?.phoneNumber ?? undefined;
+      const op = deposit.payer?.accountDetails?.provider ?? decoded.provider;
 
       return {
         status: outcome,

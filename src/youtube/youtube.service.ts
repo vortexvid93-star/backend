@@ -14,7 +14,11 @@ const YT_API = 'https://www.googleapis.com/youtube/v3';
 
 interface YtChannelItem {
   contentDetails: { relatedPlaylists: { uploads: string } };
-  snippet: { title: string; description: string; thumbnails: { default: { url: string } } };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: { default: { url: string } };
+  };
 }
 
 interface YtPlaylistItem {
@@ -37,9 +41,11 @@ interface YtVideoItem {
 function parseIsoDuration(iso: string): number {
   const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!m) return 0;
-  return (parseInt(m[1] ?? '0', 10)) * 3600
-    + (parseInt(m[2] ?? '0', 10)) * 60
-    + parseInt(m[3] ?? '0', 10);
+  return (
+    parseInt(m[1] ?? '0', 10) * 3600 +
+    parseInt(m[2] ?? '0', 10) * 60 +
+    parseInt(m[3] ?? '0', 10)
+  );
 }
 
 @Injectable()
@@ -53,7 +59,10 @@ export class YoutubeService {
 
   private get apiKey(): string {
     const key = this.config.get<string>('YOUTUBE_API_KEY');
-    if (!key) throw new Error('YOUTUBE_API_KEY manquante dans les variables d\'environnement');
+    if (!key)
+      throw new Error(
+        "YOUTUBE_API_KEY manquante dans les variables d'environnement",
+      );
     return key;
   }
 
@@ -70,8 +79,12 @@ export class YoutubeService {
     if (!res.ok) throw new Error(`YouTube channels.list échoué: ${res.status}`);
 
     const json = (await res.json()) as { items?: YtChannelItem[] };
-    const uploadsId = json.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-    if (!uploadsId) throw new Error(`Chaîne introuvable ou sans playlist uploads: ${channelId}`);
+    const uploadsId =
+      json.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsId)
+      throw new Error(
+        `Chaîne introuvable ou sans playlist uploads: ${channelId}`,
+      );
     return uploadsId;
   }
 
@@ -96,7 +109,8 @@ export class YoutubeService {
       if (pageToken) url.searchParams.set('pageToken', pageToken);
 
       const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`YouTube playlistItems.list échoué: ${res.status}`);
+      if (!res.ok)
+        throw new Error(`YouTube playlistItems.list échoué: ${res.status}`);
 
       const json = (await res.json()) as {
         items?: YtPlaylistItem[];
@@ -122,7 +136,9 @@ export class YoutubeService {
   /**
    * Récupère durée et compteur de vues pour un lot de vidéos (1 quota unit / 50 IDs).
    */
-  async fetchVideoDetails(videoIds: string[]): Promise<Map<string, { duration: number; viewCount: number }>> {
+  async fetchVideoDetails(
+    videoIds: string[],
+  ): Promise<Map<string, { duration: number; viewCount: number }>> {
     const details = new Map<string, { duration: number; viewCount: number }>();
     if (videoIds.length === 0) return details;
 
@@ -155,11 +171,14 @@ export class YoutubeService {
     return this.config.get<number>('YOUTUBE_MAX_VIDEO_AGE_MONTHS') ?? 18;
   }
 
-  async syncChannel(chaineId: string): Promise<{ upserted: number; skipped: number; archived: number }> {
+  async syncChannel(
+    chaineId: string,
+  ): Promise<{ upserted: number; skipped: number; archived: number }> {
     const chaine = await this.prisma.chaineYoutube.findUnique({
       where: { id: chaineId },
     });
-    if (!chaine || !chaine.actif) return { upserted: 0, skipped: 0, archived: 0 };
+    if (!chaine || !chaine.actif)
+      return { upserted: 0, skipped: 0, archived: 0 };
 
     // Première sync : limiter à maxVideoAgeMonths pour éviter l'import de tout l'historique
     const cutoffDate = new Date();
@@ -186,10 +205,15 @@ export class YoutubeService {
     for (const snippet of snippets) {
       const videoId = snippet.resourceId.videoId;
       const details = detailsMap.get(videoId);
-      if (!details) { skipped++; continue; }
+      if (!details) {
+        skipped++;
+        continue;
+      }
 
       const thumbnail =
-        snippet.thumbnails?.medium?.url ?? snippet.thumbnails?.default?.url ?? null;
+        snippet.thumbnails?.medium?.url ??
+        snippet.thumbnails?.default?.url ??
+        null;
 
       await this.prisma.videoEducative.upsert({
         where: { video_id: videoId },
@@ -273,7 +297,10 @@ export class YoutubeService {
     const existing = await this.prisma.chaineYoutube.findUnique({
       where: { channel_id: dto.channel_id },
     });
-    if (existing) throw new BadRequestException('Cette chaîne YouTube est déjà référencée.');
+    if (existing)
+      throw new BadRequestException(
+        'Cette chaîne YouTube est déjà référencée.',
+      );
 
     const chaine = await this.prisma.chaineYoutube.create({
       data: {
@@ -310,14 +337,18 @@ export class YoutubeService {
   }
 
   async toggleChaine(id: string, actif: boolean) {
-    const chaine = await this.prisma.chaineYoutube.findUnique({ where: { id } });
+    const chaine = await this.prisma.chaineYoutube.findUnique({
+      where: { id },
+    });
     if (!chaine) throw new NotFoundException('Chaîne introuvable.');
     await this.prisma.chaineYoutube.update({ where: { id }, data: { actif } });
     return { id, actif };
   }
 
   async deleteChaine(id: string) {
-    const chaine = await this.prisma.chaineYoutube.findUnique({ where: { id } });
+    const chaine = await this.prisma.chaineYoutube.findUnique({
+      where: { id },
+    });
     if (!chaine) throw new NotFoundException('Chaîne introuvable.');
     await this.prisma.chaineYoutube.delete({ where: { id } });
     return { deleted: true };
@@ -367,9 +398,12 @@ export class YoutubeService {
   async getVideo(videoId: string) {
     const video = await this.prisma.videoEducative.findUnique({
       where: { video_id: videoId },
-      include: { chaine: { select: { id: true, nom: true, thumbnail_url: true } } },
+      include: {
+        chaine: { select: { id: true, nom: true, thumbnail_url: true } },
+      },
     });
-    if (!video || !video.actif) throw new NotFoundException('Vidéo introuvable.');
+    if (!video || !video.actif)
+      throw new NotFoundException('Vidéo introuvable.');
     return { ...video, view_count: Number(video.view_count) };
   }
 }

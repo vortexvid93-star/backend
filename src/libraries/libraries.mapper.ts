@@ -47,9 +47,9 @@ export function mapBibliothequeDetail(
     url_externe: library.url_externe,
     statut: library.statut,
     nb_livres: isExterne ? null : library._count.appartient,
-    acces_livres: isExterne ? ('EXTERNE_REDIRECT' as const) : ('CATALOGUE_INTERNE' as const),
-    livres_populaires: isExterne
-      ? []
-      : livresPopulaires.map(mapLivrePopulaire),
+    acces_livres: isExterne
+      ? ('EXTERNE_REDIRECT' as const)
+      : ('CATALOGUE_INTERNE' as const),
+    livres_populaires: isExterne ? [] : livresPopulaires.map(mapLivrePopulaire),
   };
 }

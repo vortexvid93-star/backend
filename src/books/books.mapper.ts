@@ -145,8 +145,7 @@ export function mapProgression(progression: ProgressionLecture) {
     statut: progression.statut,
     date_debut: progression.date_debut.toISOString(),
     date_fin: progression.date_fin?.toISOString() ?? null,
-    date_telechargement:
-      progression.date_telechargement?.toISOString() ?? null,
+    date_telechargement: progression.date_telechargement?.toISOString() ?? null,
   };
 }
 

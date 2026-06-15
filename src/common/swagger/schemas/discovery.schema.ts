@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RaisonRecommandation, TypeNotification } from '../../../../generated/prisma/enums';
+import {
+  RaisonRecommandation,
+  TypeNotification,
+} from '../../../../generated/prisma/enums';
 import { PaginationMetaSchema } from './common.schema';
 import { AuteurBriefSchema, CategorieBriefSchema } from './shared.schema';
 import { TypeLivre } from '../../../../generated/prisma/enums';
@@ -26,12 +29,14 @@ export class RecommandationLivreSchema {
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
   @ApiProperty() nb_lectures: number;
   @ApiProperty({ type: [AuteurBriefSchema] }) auteurs: AuteurBriefSchema[];
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
 }
 
 export class RecommandationSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
-  @ApiProperty({ type: RecommandationLivreSchema }) livre: RecommandationLivreSchema;
+  @ApiProperty({ type: RecommandationLivreSchema })
+  livre: RecommandationLivreSchema;
   @ApiProperty() score: number;
   @ApiProperty({ enum: RaisonRecommandation }) raison: RaisonRecommandation;
   @ApiProperty() raison_libelle: string;
@@ -68,7 +73,8 @@ export class HistoriqueRechercheSchema {
 }
 
 export class PaginatedHistoriqueRechercheSchema {
-  @ApiProperty({ type: [HistoriqueRechercheSchema] }) data: HistoriqueRechercheSchema[];
+  @ApiProperty({ type: [HistoriqueRechercheSchema] })
+  data: HistoriqueRechercheSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -102,7 +108,10 @@ export class RecommandationMarkAllSeenSchema {
 export class RecommandationsByReasonSchema {
   @ApiProperty({
     type: 'object',
-    additionalProperties: { type: 'array', items: { $ref: '#/components/schemas/RecommandationSchema' } },
+    additionalProperties: {
+      type: 'array',
+      items: { $ref: '#/components/schemas/RecommandationSchema' },
+    },
   })
   groups: Record<string, RecommandationSchema[]>;
 }

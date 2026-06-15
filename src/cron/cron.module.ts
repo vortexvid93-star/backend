@@ -12,7 +12,12 @@ import { GenerateRecommendationsJob } from './jobs/generate-recommendations.job'
 import { Reset7jStatsJob } from './jobs/reset-7j-stats.job';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), DiscoveryModule, PrismaModule, YoutubeModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    DiscoveryModule,
+    PrismaModule,
+    YoutubeModule,
+  ],
   providers: [
     CronSchedulerService,
     ExpireSubscriptionsJob,

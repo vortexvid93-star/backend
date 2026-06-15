@@ -91,7 +91,10 @@ function buildSwaggerConfig() {
       SWAGGER_TAGS.CHALLENGES,
       'Défis de lecture : liste, détail, participation.',
     )
-    .addTag(SWAGGER_TAGS.BADGES, 'Badges débloqués et progression vers le prochain.')
+    .addTag(
+      SWAGGER_TAGS.BADGES,
+      'Badges débloqués et progression vers le prochain.',
+    )
     .addTag(
       SWAGGER_TAGS.GAMIFICATION,
       'Vue agrégée points / défis / badges pour l’écran d’accueil.',
@@ -100,7 +103,10 @@ function buildSwaggerConfig() {
       SWAGGER_TAGS.RECOMMENDATIONS,
       'Suggestions personnalisées et interactions (vu, ignoré).',
     )
-    .addTag(SWAGGER_TAGS.SEARCH, 'Recherche full-text et historique des requêtes.')
+    .addTag(
+      SWAGGER_TAGS.SEARCH,
+      'Recherche full-text et historique des requêtes.',
+    )
     .addTag(
       SWAGGER_TAGS.NOTIFICATIONS,
       'Notifications in-app (défis, abonnement, recommandations…).',

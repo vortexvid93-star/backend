@@ -30,11 +30,7 @@ export class AuthCacheService {
     const key = `otp:verify:${email}`;
     const current = this.get(key);
     const count = current ? parseInt(current, 10) + 1 : 1;
-    this.set(
-      key,
-      String(count),
-      AUTH_CONSTANTS.OTP_VERIFY_WINDOW_MINUTES * 60,
-    );
+    this.set(key, String(count), AUTH_CONSTANTS.OTP_VERIFY_WINDOW_MINUTES * 60);
     return count;
   }
 

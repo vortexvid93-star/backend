@@ -12,17 +12,19 @@ export function extractDepositFromCheckResponse(
   }
 
   if (topStatus === 'FOUND' && body.data && typeof body.data === 'object') {
-    return body.data as PawaPayDepositCallback;
+    return body.data;
   }
 
   if (typeof body.depositId === 'string' && typeof body.status === 'string') {
-    return body as PawaPayDepositCallback;
+    return body;
   }
 
   return null;
 }
 
-export function mapPawaPayDepositStatus(status: string): PaymentProviderOutcome {
+export function mapPawaPayDepositStatus(
+  status: string,
+): PaymentProviderOutcome {
   const normalized = status.toUpperCase();
   if (normalized === 'COMPLETED') {
     return 'ACCEPTED';

@@ -71,10 +71,7 @@ export class AuthService {
   async registerWithPassword(dto: RegisterPasswordDto) {
     const email = normalizeEmail(dto.email);
     await this.assertEmailAvailable(email);
-    const passwordHash = await hash(
-      dto.password,
-      AUTH_CONSTANTS.BCRYPT_ROUNDS,
-    );
+    const passwordHash = await hash(dto.password, AUTH_CONSTANTS.BCRYPT_ROUNDS);
     const auth = await this.createActiveLocalAccount(
       { ...dto, email },
       passwordHash,
@@ -178,8 +175,7 @@ export class AuthService {
       );
     }
 
-    const nom =
-      payload.family_name ?? payload.name ?? 'Utilisateur';
+    const nom = payload.family_name ?? payload.name ?? 'Utilisateur';
     const prenom = payload.given_name ?? 'Google';
 
     const created = await this.prisma.$transaction(async (tx) => {
@@ -221,9 +217,7 @@ export class AuthService {
       where: { google_id: googleId },
     });
     if (existing && existing.id !== authId) {
-      throw new ConflictException(
-        'google_id déjà associé à un autre compte.',
-      );
+      throw new ConflictException('google_id déjà associé à un autre compte.');
     }
 
     await this.prisma.auth.update({
@@ -280,10 +274,7 @@ export class AuthService {
       throw new ConflictException('Mot de passe déjà défini pour ce compte.');
     }
 
-    const passwordHash = await hash(
-      dto.password,
-      AUTH_CONSTANTS.BCRYPT_ROUNDS,
-    );
+    const passwordHash = await hash(dto.password, AUTH_CONSTANTS.BCRYPT_ROUNDS);
 
     const data: {
       mot_de_passe_hash: string;
@@ -319,9 +310,7 @@ export class AuthService {
       throw new ForbiddenException('Compte suspendu.');
     }
     if (auth.statut === AuthStatut.PENDING && !auth.mot_de_passe_hash) {
-      throw new ForbiddenException(
-        "Validez d'abord votre email via OTP.",
-      );
+      throw new ForbiddenException("Validez d'abord votre email via OTP.");
     }
 
     const valid = await compare(dto.password, auth.mot_de_passe_hash);
@@ -369,12 +358,7 @@ export class AuthService {
       throw new ForbiddenException('Compte suspendu.');
     }
 
-    await this.otp.verifyOtp(
-      auth.id,
-      email,
-      dto.code,
-      OtpType.RESET_PASSWORD,
-    );
+    await this.otp.verifyOtp(auth.id, email, dto.code, OtpType.RESET_PASSWORD);
 
     return { message: 'Code valide.', valid: true };
   }
@@ -414,10 +398,7 @@ export class AuthService {
       refresh_token_expires_at: null,
     };
 
-    if (
-      auth.auth_provider === AuthProvider.GOOGLE &&
-      auth.google_id
-    ) {
+    if (auth.auth_provider === AuthProvider.GOOGLE && auth.google_id) {
       updateData.auth_provider = AuthProvider.HYBRID;
     }
 

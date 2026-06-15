@@ -42,9 +42,7 @@ export class TokenService {
     private readonly prisma: PrismaService,
   ) {}
 
-  buildUserResponse(
-    auth: Auth & { personne: Personne },
-  ): AuthUserResponse {
+  buildUserResponse(auth: Auth & { personne: Personne }): AuthUserResponse {
     return {
       id: auth.id,
       email: auth.email,

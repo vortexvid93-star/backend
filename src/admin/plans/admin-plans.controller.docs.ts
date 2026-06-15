@@ -15,7 +15,11 @@ import {
 } from '../../common/swagger/schemas/payments.schema';
 
 const planIdParam = () =>
-  ApiParam({ name: 'id', format: 'uuid', description: 'ID plan (`planAbonnement.id`).' });
+  ApiParam({
+    name: 'id',
+    format: 'uuid',
+    description: 'ID plan (`planAbonnement.id`).',
+  });
 
 export const AdminPlansControllerDocs = () => ApiJwtAdmin();
 
@@ -32,7 +36,8 @@ export const AdminPlansCreateDocs = () =>
   applyDecorators(
     ApiOperation({
       summary: 'Créer un plan',
-      description: '`plan` unique. Prix min 100 XOF. `statut=ACTIF` par défaut.',
+      description:
+        '`plan` unique. Prix min 100 XOF. `statut=ACTIF` par défaut.',
     }),
     ApiCreatedResponse({ type: PlanItemSchema }),
     ApiBadRequestResponse({ description: 'Prix < 100 XOF.' }),

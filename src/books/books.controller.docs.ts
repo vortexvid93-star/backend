@@ -115,7 +115,9 @@ export const BooksStreamDocs = () =>
         'Avec `validate=true` : réponse JSON confirmant la validité du token (tests / debug). ' +
         '**Frontend** : WebView, `<audio src>`, ou fetch avec redirect ; ne pas exposer le token dans les logs.',
     }),
-    ApiFoundResponse({ description: 'Redirection 302 vers l’URL du média (mode normal).' }),
+    ApiFoundResponse({
+      description: 'Redirection 302 vers l’URL du média (mode normal).',
+    }),
     ApiOkResponse({ type: BookStreamValidateSchema }),
   );
 
@@ -185,7 +187,8 @@ export const BooksCreateCommentDocs = () =>
     bookIdParam(),
     ApiOperation({
       summary: 'Publier un commentaire',
-      description: 'Ajoute un avis textuel sur le livre. **Frontend** : formulaire sous la fiche.',
+      description:
+        'Ajoute un avis textuel sur le livre. **Frontend** : formulaire sous la fiche.',
     }),
     ApiCreatedResponse({ type: CommentSchema }),
   );

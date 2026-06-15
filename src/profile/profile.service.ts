@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  StatutAbonnement,
   StatutCommentaire,
   StatutDefi,
   StatutProgression,
@@ -185,9 +184,8 @@ export class ProfileService {
         row.defi.objectif_valeur > 0
           ? Math.min(
               100,
-              Math.round(
-                (row.progression / row.defi.objectif_valeur) * 10000,
-              ) / 100,
+              Math.round((row.progression / row.defi.objectif_valeur) * 10000) /
+                100,
             )
           : 0;
       return {
@@ -206,9 +204,9 @@ export class ProfileService {
         ? mapParticipationSummary(participationsEnCours[0])
         : null;
 
-    const defiPlusAvance = participationsEnCours.reduce<
-      ReturnType<typeof mapParticipationSummary> | null
-    >((best, row) => {
+    const defiPlusAvance = participationsEnCours.reduce<ReturnType<
+      typeof mapParticipationSummary
+    > | null>((best, row) => {
       const current = mapParticipationSummary(row);
       if (!best || current.pourcentage > best.pourcentage) return current;
       return best;
@@ -499,7 +497,9 @@ export class ProfileService {
             orderBy: { createdAt: 'desc' },
             take: fetchSize,
             include: {
-              livre: { select: { id: true, titre: true, couverture_url: true } },
+              livre: {
+                select: { id: true, titre: true, couverture_url: true },
+              },
             },
           })
           .then((rows) =>
@@ -569,7 +569,7 @@ export class ProfileService {
 
     const counts = await Promise.all(countPromises);
     const total = query.type
-      ? counts[0] ?? 0
+      ? (counts[0] ?? 0)
       : counts.reduce((sum, n) => sum + n, 0);
 
     return {
@@ -608,56 +608,51 @@ export class ProfileService {
       auth.numero_telephone,
     );
 
-    const [
-      abonnement,
-      defiUrgent,
-      livreStale,
-      defiDisponible,
-      defiAvance,
-    ] = await Promise.all([
-      this.findActiveAbonnement(authId),
-      this.prisma.userDefi.findFirst({
-        where: {
-          auth_id: authId,
-          statut: StatutUserDefi.EN_COURS,
-          defi: {
-            statut: StatutDefi.ACTIF,
-            date_fin: { gt: now, lte: twoDaysFromNow },
+    const [abonnement, defiUrgent, livreStale, defiDisponible, defiAvance] =
+      await Promise.all([
+        this.findActiveAbonnement(authId),
+        this.prisma.userDefi.findFirst({
+          where: {
+            auth_id: authId,
+            statut: StatutUserDefi.EN_COURS,
+            defi: {
+              statut: StatutDefi.ACTIF,
+              date_fin: { gt: now, lte: twoDaysFromNow },
+            },
           },
-        },
-        include: { defi: true },
-        orderBy: { defi: { date_fin: 'asc' } },
-      }),
-      this.prisma.progressionLecture.findFirst({
-        where: {
-          auth_id: authId,
-          statut: StatutProgression.EN_COURS,
-          derniere_maj: { lt: sevenDaysAgo },
-        },
-        include: { livre: { select: { id: true, titre: true } } },
-        orderBy: { derniere_maj: 'asc' },
-      }),
-      this.prisma.defi.findFirst({
-        where: {
-          statut: StatutDefi.ACTIF,
-          date_fin: { gt: now },
-          userdefis: { none: { auth_id: authId } },
-        },
-        orderBy: { date_fin: 'asc' },
-        select: { id: true, titre: true, date_fin: true },
-      }),
-      this.prisma.userDefi.findMany({
-        where: {
-          auth_id: authId,
-          statut: StatutUserDefi.EN_COURS,
-          defi: {
-            statut: StatutDefi.ACTIF,
-            date_fin: { gt: now, lte: sevenDaysFromNow },
+          include: { defi: true },
+          orderBy: { defi: { date_fin: 'asc' } },
+        }),
+        this.prisma.progressionLecture.findFirst({
+          where: {
+            auth_id: authId,
+            statut: StatutProgression.EN_COURS,
+            derniere_maj: { lt: sevenDaysAgo },
           },
-        },
-        include: { defi: { include: { badge: true } } },
-      }),
-    ]);
+          include: { livre: { select: { id: true, titre: true } } },
+          orderBy: { derniere_maj: 'asc' },
+        }),
+        this.prisma.defi.findFirst({
+          where: {
+            statut: StatutDefi.ACTIF,
+            date_fin: { gt: now },
+            userdefis: { none: { auth_id: authId } },
+          },
+          orderBy: { date_fin: 'asc' },
+          select: { id: true, titre: true, date_fin: true },
+        }),
+        this.prisma.userDefi.findMany({
+          where: {
+            auth_id: authId,
+            statut: StatutUserDefi.EN_COURS,
+            defi: {
+              statut: StatutDefi.ACTIF,
+              date_fin: { gt: now, lte: sevenDaysFromNow },
+            },
+          },
+          include: { defi: { include: { badge: true } } },
+        }),
+      ]);
 
     type ActionItem = {
       code: string;
@@ -749,10 +744,7 @@ export class ProfileService {
     const defiProcheFin = defiAvance
       .map((row) => ({
         row,
-        pct: computeProgressPercent(
-          row.progression,
-          row.defi.objectif_valeur,
-        ),
+        pct: computeProgressPercent(row.progression, row.defi.objectif_valeur),
       }))
       .filter((x) => x.pct >= 70)
       .sort((a, b) => b.pct - a.pct)[0];
@@ -772,10 +764,7 @@ export class ProfileService {
     const badgeProche = defiAvance
       .map((row) => ({
         row,
-        pct: computeProgressPercent(
-          row.progression,
-          row.defi.objectif_valeur,
-        ),
+        pct: computeProgressPercent(row.progression, row.defi.objectif_valeur),
       }))
       .filter((x) => x.pct >= 50 && x.pct < 100)
       .sort((a, b) => b.pct - a.pct)[0];

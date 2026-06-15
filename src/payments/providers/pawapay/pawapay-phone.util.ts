@@ -1,8 +1,5 @@
 /** Normalise MSISDN pour PawaPay (Congo : indicatif 242). */
-export function normalizePawaPayPhone(
-  phone: string,
-  country = 'CG',
-): string {
+export function normalizePawaPayPhone(phone: string, country = 'CG'): string {
   let msisdn = phone.replace(/\s+/g, '').replace(/^\+/, '');
   const cc = country.toUpperCase() === 'CG' ? '242' : '';
 

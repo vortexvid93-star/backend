@@ -17,8 +17,8 @@ export const AdminNotificationsListDocs = () =>
     ApiOperation({
       summary: 'Lister les notifications envoyées',
       description:
-        'Retourne l\'historique des notifications in-app groupées par envoi ' +
-        '(titre + contenu + type + minute d\'envoi). Paginé.',
+        "Retourne l'historique des notifications in-app groupées par envoi " +
+        "(titre + contenu + type + minute d'envoi). Paginé.",
     }),
     ApiQuery({ name: 'page', required: false, type: Number }),
     ApiQuery({ name: 'limit', required: false, type: Number }),
@@ -41,9 +41,12 @@ export const AdminNotificationsCreateDocs = () =>
         'Types autorisés : `ANNONCE`, `PROMOTION`, `MAINTENANCE`, `ACTUALITE`, `ALERTE`.',
     }),
     ApiCreatedResponse({ type: AdminNotificationCreateSchema }),
-    ApiNotFoundResponse({ description: 'Utilisateur introuvable (cible unique).' }),
+    ApiNotFoundResponse({
+      description: 'Utilisateur introuvable (cible unique).',
+    }),
     ApiBadRequestResponse({
-      description: 'Type invalide ou aucun utilisateur actif (diffusion globale).',
+      description:
+        'Type invalide ou aucun utilisateur actif (diffusion globale).',
     }),
   );
 
@@ -53,8 +56,11 @@ export const AdminNotificationsDeleteDocs = () =>
       summary: 'Supprimer un groupe de notifications',
       description:
         'Supprime toutes les notifications du même envoi (même titre, contenu, type ' +
-        'et minute de création). Identifié par l\'`id` d\'un représentant du groupe.',
+        "et minute de création). Identifié par l'`id` d'un représentant du groupe.",
     }),
-    ApiOkResponse({ description: 'Nombre de lignes supprimées.', schema: { example: { deleted: 3 } } }),
+    ApiOkResponse({
+      description: 'Nombre de lignes supprimées.',
+      schema: { example: { deleted: 3 } },
+    }),
     ApiNotFoundResponse({ description: 'Notification introuvable.' }),
   );

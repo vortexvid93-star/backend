@@ -30,9 +30,7 @@ export class ActiveAccountGuard implements CanActivate {
     }
 
     if (auth.statut === AuthStatut.PENDING) {
-      throw new ForbiddenException(
-        "Validez d'abord votre email via OTP.",
-      );
+      throw new ForbiddenException("Validez d'abord votre email via OTP.");
     }
 
     if (auth.statut === AuthStatut.BANNI) {

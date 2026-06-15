@@ -23,14 +23,16 @@ export class LivreCatalogItemSchema {
   @ApiPropertyOptional({ nullable: true }) annee_publication: number | null;
   @ApiPropertyOptional({ nullable: true }) nombre_pages: number | null;
   @ApiProperty({ type: [AuteurBriefSchema] }) auteurs: AuteurBriefSchema[];
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
   @ApiProperty() nb_lectures: number;
   @ApiPropertyOptional() nb_lectures_7j?: number;
 }
 
 export class PaginatedLivreCatalogSchema {
-  @ApiProperty({ type: [LivreCatalogItemSchema] }) data: LivreCatalogItemSchema[];
+  @ApiProperty({ type: [LivreCatalogItemSchema] })
+  data: LivreCatalogItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
@@ -53,7 +55,8 @@ export class LivreLibraryItemSchema {
   @ApiPropertyOptional({ nullable: true }) annee_publication: number | null;
   @ApiPropertyOptional({ nullable: true }) nombre_pages: number | null;
   @ApiProperty({ type: [AuteurBriefSchema] }) auteurs: AuteurBriefSchema[];
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
   @ApiProperty() nb_lectures: number;
 }
@@ -96,17 +99,21 @@ export class LivreDetailSchema {
   @ApiPropertyOptional({ nullable: true }) annee_publication: number | null;
   @ApiPropertyOptional({ nullable: true }) nombre_pages: number | null;
   @ApiProperty({ type: [AuteurDetailSchema] }) auteurs: AuteurDetailSchema[];
-  @ApiProperty({ type: [CategorieBriefSchema] }) categories: CategorieBriefSchema[];
-  @ApiProperty({ type: LivreStatistiquesSchema }) statistiques: LivreStatistiquesSchema;
+  @ApiProperty({ type: [CategorieBriefSchema] })
+  categories: CategorieBriefSchema[];
+  @ApiProperty({ type: LivreStatistiquesSchema })
+  statistiques: LivreStatistiquesSchema;
   @ApiPropertyOptional({ type: MaProgressionBriefSchema, nullable: true })
   ma_progression: MaProgressionBriefSchema | null;
   @ApiPropertyOptional({ nullable: true }) ma_note: number | null;
-  @ApiPropertyOptional({ type: LivreAccesSchema, nullable: true }) acces: LivreAccesSchema | null;
+  @ApiPropertyOptional({ type: LivreAccesSchema, nullable: true })
+  acces: LivreAccesSchema | null;
 }
 
 export class BookAccessCheckSchema {
   @ApiProperty({ format: 'uuid' }) livre_id: string;
-  @ApiPropertyOptional({ enum: TypeAccesToken, nullable: true }) type_acces_demande: TypeAccesToken | null;
+  @ApiPropertyOptional({ enum: TypeAccesToken, nullable: true })
+  type_acces_demande: TypeAccesToken | null;
   @ApiProperty() peut_lire: boolean;
   @ApiProperty() peut_telecharger: boolean;
   @ApiProperty() eligible: boolean;
@@ -139,8 +146,11 @@ export class BookResourceInfoSchema {
 
 export class BookAccessTokenSchema {
   @ApiPropertyOptional({ nullable: true }) token: string | null;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) expires_at: string | null;
-  @ApiPropertyOptional({ enum: TypeAccesToken, nullable: true }) type_acces: TypeAccesToken | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) expires_at:
+    | string
+    | null;
+  @ApiPropertyOptional({ enum: TypeAccesToken, nullable: true })
+  type_acces: TypeAccesToken | null;
   @ApiPropertyOptional({ nullable: true }) stream_url: string | null;
   @ApiPropertyOptional() expires_in_sec?: number;
   @ApiPropertyOptional() progression_creee?: boolean;
@@ -158,8 +168,11 @@ export class ProgressionSchema {
   @ApiProperty() duree_lecture_min: number;
   @ApiProperty({ enum: StatutProgression }) statut: StatutProgression;
   @ApiProperty({ format: 'date-time' }) date_debut: string;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin: string | null;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_telechargement: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin:
+    | string
+    | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  date_telechargement: string | null;
 }
 
 export class ProgressionUpdateSchema {
@@ -167,7 +180,9 @@ export class ProgressionUpdateSchema {
   @ApiProperty() page_actuelle: number;
   @ApiProperty() pourcentage: number;
   @ApiProperty({ enum: StatutProgression }) statut: StatutProgression;
-  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin: string | null;
+  @ApiPropertyOptional({ format: 'date-time', nullable: true }) date_fin:
+    | string
+    | null;
 }
 
 export class CommentAuteurSchema {
@@ -198,6 +213,7 @@ export class RecentAccessItemSchema extends LivreCatalogItemSchema {
 }
 
 export class PaginatedRecentAccessSchema {
-  @ApiProperty({ type: [RecentAccessItemSchema] }) data: RecentAccessItemSchema[];
+  @ApiProperty({ type: [RecentAccessItemSchema] })
+  data: RecentAccessItemSchema[];
   @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }

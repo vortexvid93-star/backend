@@ -81,7 +81,8 @@ export const AdminLibrariesArchiveDocs = () =>
     libraryIdParam(),
     ApiOperation({
       summary: 'Archiver une bibliothèque',
-      description: 'Passe `statut` à ARCHIVEE (masquée du catalogue utilisateur).',
+      description:
+        'Passe `statut` à ARCHIVEE (masquée du catalogue utilisateur).',
     }),
     ApiOkResponse({ type: ArchiveStatutSchema }),
     ApiNotFoundResponse(),
@@ -92,7 +93,8 @@ export const AdminLibrariesUnarchiveDocs = () =>
     libraryIdParam(),
     ApiOperation({
       summary: 'Désarchiver une bibliothèque',
-      description: 'Passe `statut` à ACTIVE (visible dans le catalogue utilisateur).',
+      description:
+        'Passe `statut` à ACTIVE (visible dans le catalogue utilisateur).',
     }),
     ApiOkResponse({ type: ArchiveStatutSchema }),
     ApiNotFoundResponse(),

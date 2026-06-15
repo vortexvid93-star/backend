@@ -53,7 +53,8 @@ export class AuthTokensResponseSchema {
 /** Réponse OTP verify / Google login (champ additionnel onboarding). */
 export class AuthTokensWithNewUserSchema extends AuthTokensResponseSchema {
   @ApiProperty({
-    description: 'true si première connexion (inscription), false si reconnexion.',
+    description:
+      'true si première connexion (inscription), false si reconnexion.',
     example: true,
   })
   is_new_user: boolean;

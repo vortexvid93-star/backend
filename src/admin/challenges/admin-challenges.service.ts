@@ -4,10 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
-import {
-  StatutDefi,
-  StatutUserDefi,
-} from '../../../generated/prisma/enums';
+import { StatutDefi, StatutUserDefi } from '../../../generated/prisma/enums';
 import { buildPaginationMeta } from '../../common/pagination.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { mapAdminChallengeListItem } from './admin-challenges.mapper';

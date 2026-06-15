@@ -37,7 +37,13 @@ export class BookFileStorageService implements OnModuleInit {
     const endpoint = this.config.get<string>('R2_ENDPOINT');
     const bucket = this.config.get<string>('R2_BUCKET_NAME');
 
-    if (!accountId || !accessKeyId || !secretAccessKey || !endpoint || !bucket) {
+    if (
+      !accountId ||
+      !accessKeyId ||
+      !secretAccessKey ||
+      !endpoint ||
+      !bucket
+    ) {
       throw new Error(
         'Variables R2 requises : R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT, R2_BUCKET_NAME.',
       );
@@ -53,7 +59,9 @@ export class BookFileStorageService implements OnModuleInit {
     this.logger.log(`Stockage livres R2 configuré (bucket: ${bucket})`);
   }
 
-  async uploadBookFile(file: Express.Multer.File): Promise<BookFileUploadResult> {
+  async uploadBookFile(
+    file: Express.Multer.File,
+  ): Promise<BookFileUploadResult> {
     const extension = extname(file.originalname).toLowerCase();
     const objectKey = `${BOOK_FILE_STORAGE_CONSTANTS.FOLDER}/${randomUUID()}${extension}`;
 
@@ -72,7 +80,10 @@ export class BookFileStorageService implements OnModuleInit {
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'erreur R2 inconnue';
-      this.logger.error(`Upload livre R2 échoué (${objectKey}): ${detail}`, error);
+      this.logger.error(
+        `Upload livre R2 échoué (${objectKey}): ${detail}`,
+        error,
+      );
 
       const isDev = this.config.get<string>('NODE_ENV') !== 'production';
       throw new InternalServerErrorException(
@@ -152,15 +163,14 @@ export class BookFileStorageService implements OnModuleInit {
     }
 
     if (file.size > BOOK_FILE_STORAGE_CONSTANTS.MAX_BOOK_FILE_SIZE_BYTES) {
-      throw new BadRequestException('Fichier livre trop volumineux (max 50 Mo).');
+      throw new BadRequestException(
+        'Fichier livre trop volumineux (max 50 Mo).',
+      );
     }
   }
 
   private resolveContentType(file: Express.Multer.File): string {
-    if (
-      file.mimetype &&
-      file.mimetype !== 'application/octet-stream'
-    ) {
+    if (file.mimetype && file.mimetype !== 'application/octet-stream') {
       return file.mimetype;
     }
 

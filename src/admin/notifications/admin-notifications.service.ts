@@ -40,7 +40,7 @@ export class AdminNotificationsService {
           auth_id: authId,
           titre,
           contenu,
-          type: dto.type as TypeNotification,
+          type: dto.type,
         },
       });
 
@@ -66,7 +66,7 @@ export class AdminNotificationsService {
         auth_id: r.id,
         titre,
         contenu,
-        type: dto.type as TypeNotification,
+        type: dto.type,
       })),
     });
 
@@ -102,7 +102,10 @@ export class AdminNotificationsService {
           GROUP BY titre, contenu, type, date_trunc('minute', "createdAt")
         ) sq
       `;
-      return { data: this._mapRows(rows), meta: buildPaginationMeta(page, limit, Number(count)) };
+      return {
+        data: this._mapRows(rows),
+        meta: buildPaginationMeta(page, limit, Number(count)),
+      };
     }
 
     const rows = await this.prisma.$queryRaw<NotifGroupRow[]>`
@@ -126,7 +129,10 @@ export class AdminNotificationsService {
       ) sq
     `;
 
-    return { data: this._mapRows(rows), meta: buildPaginationMeta(page, limit, Number(count)) };
+    return {
+      data: this._mapRows(rows),
+      meta: buildPaginationMeta(page, limit, Number(count)),
+    };
   }
 
   async deleteNotificationGroup(id: string) {
@@ -156,8 +162,11 @@ export class AdminNotificationsService {
       titre: r.titre,
       contenu: r.contenu ?? null,
       type: r.type,
-      cible: Number(r.total_destinataires) > 1 ? ('TOUS' as const) : ('UTILISATEUR' as const),
-      envoyeLe: (r.envoyeLe as Date).toISOString(),
+      cible:
+        Number(r.total_destinataires) > 1
+          ? ('TOUS' as const)
+          : ('UTILISATEUR' as const),
+      envoyeLe: r.envoyeLe.toISOString(),
       total_destinataires: Number(r.total_destinataires),
       nb_lus: Number(r.nb_lus),
     }));

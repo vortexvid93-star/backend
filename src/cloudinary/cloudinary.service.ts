@@ -37,7 +37,9 @@ export class CloudinaryService implements OnModuleInit {
 
     const parsed = this.parseCloudinaryUrl(cloudinaryUrl);
     if (!parsed) {
-      throw new Error('CLOUDINARY_URL invalide. Format attendu: cloudinary://key:secret@cloud_name');
+      throw new Error(
+        'CLOUDINARY_URL invalide. Format attendu: cloudinary://key:secret@cloud_name',
+      );
     }
 
     cloudinary.config({
@@ -78,7 +80,9 @@ export class CloudinaryService implements OnModuleInit {
     }
   }
 
-  async deleteBookByPublicId(publicId: string | null | undefined): Promise<void> {
+  async deleteBookByPublicId(
+    publicId: string | null | undefined,
+  ): Promise<void> {
     if (!publicId) return;
 
     try {
@@ -240,7 +244,9 @@ export class CloudinaryService implements OnModuleInit {
     }
 
     if (file.size > CLOUDINARY_CONSTANTS.MAX_BOOK_FILE_SIZE_BYTES) {
-      throw new BadRequestException('Fichier livre trop volumineux (max 50 Mo).');
+      throw new BadRequestException(
+        'Fichier livre trop volumineux (max 50 Mo).',
+      );
     }
   }
 
@@ -315,8 +321,9 @@ export class CloudinaryService implements OnModuleInit {
     options: Record<string, unknown>,
   ): Promise<UploadApiResponse> {
     const mime =
-      file.mimetype === 'application/octet-stream' || file.mimetype === 'image/jpg'
-        ? this.mimeFromExtension(file.originalname) ?? 'image/jpeg'
+      file.mimetype === 'application/octet-stream' ||
+      file.mimetype === 'image/jpg'
+        ? (this.mimeFromExtension(file.originalname) ?? 'image/jpeg')
         : file.mimetype;
 
     const dataUri = `data:${mime};base64,${file.buffer.toString('base64')}`;
@@ -333,7 +340,7 @@ export class CloudinaryService implements OnModuleInit {
   ): Promise<UploadApiResponse> {
     const mime =
       file.mimetype === 'application/octet-stream'
-        ? this.bookMimeFromExtension(file.originalname) ?? file.mimetype
+        ? (this.bookMimeFromExtension(file.originalname) ?? file.mimetype)
         : file.mimetype;
 
     const dataUri = `data:${mime};base64,${file.buffer.toString('base64')}`;

@@ -90,8 +90,7 @@ export const PROFILE_COMPLETION_FIELDS = [
   'numero_telephone',
 ] as const;
 
-export type ProfileCompletionField =
-  (typeof PROFILE_COMPLETION_FIELDS)[number];
+export type ProfileCompletionField = (typeof PROFILE_COMPLETION_FIELDS)[number];
 
 export function computeProfileCompletion(
   personne: {

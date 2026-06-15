@@ -140,10 +140,7 @@ export class GamificationService {
       }),
     ]);
 
-    const points_badges = userBadges.reduce(
-      (s, r) => s + r.badge.points,
-      0,
-    );
+    const points_badges = userBadges.reduce((s, r) => s + r.badge.points, 0);
 
     const bonusRows = await this.prisma.userDefi.findMany({
       where: { auth_id: authId, statut: StatutUserDefi.COMPLETE },
