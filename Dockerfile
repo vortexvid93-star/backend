@@ -55,18 +55,18 @@ FROM base AS production
 
 ENV NODE_ENV=production
 
+RUN addgroup -g 1001 -S nodejs \
+  && adduser -S nestjs -u 1001 -G nodejs
+
 WORKDIR /app
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/generated ./generated
-COPY --from=builder /app/package.json ./package.json
-COPY docker/entrypoint.prod.sh /entrypoint.sh
+COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/generated ./generated
+COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --chown=nestjs:nodejs docker/entrypoint.prod.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh \
-  && addgroup -g 1001 -S nodejs \
-  && adduser -S nestjs -u 1001 -G nodejs \
-  && chown -R nestjs:nodejs /app
+RUN chmod +x /entrypoint.sh
 
 USER nestjs
 
