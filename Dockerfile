@@ -31,7 +31,27 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev \
   && npm install prisma@7.8.0 --no-save
 
-# ─── Image production ─────────────────────────────────────────────────────────
+# ─── Image développement (docker-compose.yml — target: development) ───────────
+FROM base AS development
+
+ENV NODE_ENV=development
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+COPY docker/entrypoint.dev.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 3000
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+# ─── Image production (cible par défaut — Render, docker-compose.prod.yml) ────
 FROM base AS production
 
 ENV NODE_ENV=production
@@ -53,26 +73,6 @@ RUN chmod +x /entrypoint.sh \
   && chown -R nestjs:nodejs /app
 
 USER nestjs
-
-EXPOSE 3000
-
-ENTRYPOINT ["/entrypoint.sh"]
-
-# ─── Image développement (docker-compose.yml) ───────────────────────────────────
-FROM base AS development
-
-ENV NODE_ENV=development
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm ci
-
-COPY . .
-COPY docker/entrypoint.dev.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
 
