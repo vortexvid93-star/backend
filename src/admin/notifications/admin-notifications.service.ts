@@ -6,6 +6,7 @@ import {
 import { AuthStatut } from '../../../generated/prisma/enums';
 import { buildPaginationMeta } from '../../common/pagination.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PushService } from '../../push/push.service';
 import type { AdminNotificationsListQueryDto } from './dto/admin-notifications-list.dto';
 import type { CreateAdminNotificationDto } from './dto/create-admin-notification.dto';
 
@@ -21,7 +22,10 @@ type NotifGroupRow = {
 
 @Injectable()
 export class AdminNotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   async createNotification(dto: CreateAdminNotificationDto) {
     const titre = dto.titre.trim();
@@ -42,6 +46,12 @@ export class AdminNotificationsService {
           contenu,
           type: dto.type,
         },
+      });
+
+      void this.pushService.sendToUser(authId, {
+        title: titre,
+        body: contenu ?? '',
+        data: { type: dto.type, notificationId: notification.id },
       });
 
       return {
@@ -69,6 +79,15 @@ export class AdminNotificationsService {
         type: dto.type,
       })),
     });
+
+    void this.pushService.sendToMany(
+      recipients.map((r) => r.id),
+      {
+        title: titre,
+        body: contenu ?? '',
+        data: { type: dto.type },
+      },
+    );
 
     return { cible: 'TOUS' as const, created: result.count };
   }

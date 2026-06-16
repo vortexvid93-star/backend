@@ -7,6 +7,7 @@ import {
   TypeNotification,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import { isDefiCurrentlyActive } from './challenges-progress.util';
 
 type DefiRow = {
@@ -33,7 +34,10 @@ type BookContext = {
 
 @Injectable()
 export class ChallengesEngineService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   async syncExpiredParticipations(authId: string): Promise<number> {
     const result = await this.prisma.userDefi.updateMany({
@@ -234,6 +238,12 @@ export class ChallengesEngineService {
       },
     });
 
+    void this.pushService.sendToUser(authId, {
+      title: 'Félicitations ! Défi relevé',
+      body: `Bravo ! Vous avez terminé le défi « ${defi.titre} ».`,
+      data: { type: TypeNotification.DEFI },
+    });
+
     const existingBadge = await tx.userBadge.findUnique({
       where: {
         auth_id_badge_id: { auth_id: authId, badge_id: defi.badge_id },
@@ -251,6 +261,12 @@ export class ChallengesEngineService {
           contenu: `Badge « ${defi.badge.nom} » débloqué.`,
           type: TypeNotification.BADGE,
         },
+      });
+
+      void this.pushService.sendToUser(authId, {
+        title: 'Nouveau badge !',
+        body: `Badge « ${defi.badge.nom} » débloqué.`,
+        data: { type: TypeNotification.BADGE },
       });
     }
   }

@@ -21,6 +21,7 @@ import type { ChallengesQueryDto } from './dto/challenges-query.dto';
 import type { ReadingQueryDto } from './dto/reading-query.dto';
 import type { SocialQueryDto } from './dto/social-query.dto';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
+import type { UpdatePushTokenDto } from './dto/update-push-token.dto';
 import {
   aggregateTopCategories,
   computeProfileCompletion,
@@ -1119,6 +1120,34 @@ export class ProfileService {
       completes,
       echoques,
       prochaine_echeance: mapProchaine,
+    };
+  }
+
+  async updatePushToken(authId: string, dto: UpdatePushTokenDto) {
+    const expo = dto.expo_push_token?.trim() || null;
+    const fcm = dto.fcm_push_token?.trim() || null;
+    const platform = dto.platform?.trim() || null;
+
+    if (!expo && !fcm) {
+      throw new BadRequestException(
+        'Au moins un token push (expo_push_token ou fcm_push_token) est requis.',
+      );
+    }
+
+    await this.prisma.auth.update({
+      where: { id: authId },
+      data: {
+        ...(expo !== null ? { expo_push_token: expo } : {}),
+        ...(fcm !== null ? { fcm_push_token: fcm } : {}),
+        ...(platform ? { push_platform: platform } : {}),
+      },
+    });
+
+    return {
+      registered: true,
+      expo_push_token: expo,
+      fcm_push_token: fcm,
+      platform,
     };
   }
 }

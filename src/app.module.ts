@@ -15,11 +15,13 @@ import { DiscoveryModule } from './discovery/discovery.module';
 import { AdminModule } from './admin/admin.module';
 import { CronModule } from './cron/cron.module';
 import { YoutubeModule } from './youtube/youtube.module';
+import { PushModule } from './push/push.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    PushModule,
     CloudinaryModule,
     BookFileStorageModule,
     AuthModule,

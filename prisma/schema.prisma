@@ -312,6 +312,9 @@ model Auth {
   refresh_token            String?      @db.VarChar(500)
   refresh_token_expires_at DateTime?
   jti                      String?      @unique @db.VarChar(100)
+  expo_push_token          String?      @db.VarChar(500)
+  fcm_push_token           String?      @db.VarChar(500)
+  push_platform            String?      @db.VarChar(20)
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @default(now()) @updatedAt
 

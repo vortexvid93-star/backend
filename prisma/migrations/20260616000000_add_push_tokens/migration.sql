@@ -1,0 +1,4 @@
+ALTER TABLE "auth"
+  ADD COLUMN IF NOT EXISTS "expo_push_token" VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS "fcm_push_token" VARCHAR(500),
+  ADD COLUMN IF NOT EXISTS "push_platform" VARCHAR(20);

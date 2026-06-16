@@ -28,6 +28,7 @@ import { ChallengesQueryDto } from './dto/challenges-query.dto';
 import { ReadingQueryDto } from './dto/reading-query.dto';
 import { SocialQueryDto } from './dto/social-query.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePushTokenDto } from './dto/update-push-token.dto';
 import {
   ProfileActionsDocs,
   ProfileActivityDocs,
@@ -234,5 +235,14 @@ export class ProfileController {
     @Query() query: SocialQueryDto,
   ) {
     return this.profileService.getMyRatings(user.sub, query);
+  }
+
+  @Patch('push-token')
+  @HttpCode(HttpStatus.OK)
+  updatePushToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdatePushTokenDto,
+  ) {
+    return this.profileService.updatePushToken(user.sub, dto);
   }
 }

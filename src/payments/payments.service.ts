@@ -22,6 +22,7 @@ import {
   computeJoursRestants,
 } from './subscription-query.util';
 import { SubscriptionsService } from './subscriptions.service';
+import { PushService } from '../push/push.service';
 import { resolvePawaPayPublicBase } from './providers/pawapay/pawapay.config';
 import { decodePawaPayOperateur } from './providers/pawapay/pawapay-operateur.util';
 
@@ -38,6 +39,7 @@ export class PaymentsService {
     private readonly providerFactory: PaymentProviderFactory,
     private readonly config: ConfigService,
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly pushService: PushService,
   ) {}
 
   async initPayment(authId: string, dto: InitPaymentDto) {
@@ -466,6 +468,8 @@ export class PaymentsService {
     paiementId: string,
     details: { operateur: string | null; numero_telephone: string | null },
   ) {
+    let authId: string | null = null;
+
     await this.prisma.$transaction(async (tx) => {
       const paiement = await tx.paiement.findUnique({
         where: { id: paiementId },
@@ -474,8 +478,24 @@ export class PaymentsService {
 
       if (!paiement) return;
 
+      authId = paiement.auth_id;
       await applySuccessfulPayment(tx, { paiement, ...details });
     });
+
+    if (!authId) return;
+
+    const lastNotif = await this.prisma.notification.findFirst({
+      where: { auth_id: authId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (lastNotif) {
+      void this.pushService.sendToUser(authId, {
+        title: lastNotif.titre,
+        body: lastNotif.contenu ?? '',
+        data: { type: lastNotif.type, notificationId: lastNotif.id },
+      });
+    }
   }
 
   private async assertCanInitPayment(authId: string, planId: string) {

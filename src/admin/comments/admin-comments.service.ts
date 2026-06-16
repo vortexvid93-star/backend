@@ -6,13 +6,17 @@ import {
 import type { Prisma } from '../../../generated/prisma/client';
 import { buildPaginationMeta } from '../../common/pagination.util';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PushService } from '../../push/push.service';
 import { mapAdminComment } from './admin-comments.mapper';
 import type { AdminCommentsQueryDto } from './dto/admin-comments-query.dto';
 import type { ModerateCommentDto } from './dto/moderate-comment.dto';
 
 @Injectable()
 export class AdminCommentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   async listComments(query: AdminCommentsQueryDto) {
     const page = query.page ?? 1;
@@ -53,15 +57,15 @@ export class AdminCommentsService {
       throw new NotFoundException('Commentaire introuvable.');
     }
 
+    const contenuNotif = dto.raison?.trim()
+      ? `Votre commentaire a été modéré. Raison : ${dto.raison.trim()}`
+      : 'Votre commentaire a été modéré par notre équipe.';
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.commentaire.update({
         where: { id },
         data: { statut: StatutCommentaire.MODERE },
       });
-
-      const contenuNotif = dto.raison?.trim()
-        ? `Votre commentaire a été modéré. Raison : ${dto.raison.trim()}`
-        : 'Votre commentaire a été modéré par notre équipe.';
 
       await tx.notification.create({
         data: {
@@ -73,6 +77,12 @@ export class AdminCommentsService {
       });
 
       return row;
+    });
+
+    void this.pushService.sendToUser(comment.auth_id, {
+      title: 'Commentaire modéré',
+      body: contenuNotif,
+      data: { type: TypeNotification.SYSTEME },
     });
 
     return { id: updated.id, statut: updated.statut };
