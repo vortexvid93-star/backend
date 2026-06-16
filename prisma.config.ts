@@ -9,6 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Prisma CLI (migrations) : connexion directe Supabase si définie, sinon DATABASE_URL
+    url:
+      process.env["DIRECT_DATABASE_URL"] ??
+      process.env["DATABASE_URL"] ??
+      "",
   },
 });
