@@ -23,13 +23,12 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# ─── Dépendances production (+ CLI Prisma pour migrations au démarrage) ───────
+# ─── Dépendances production ───────────────────────────────────────────────────
 FROM base AS prod-deps
 
 COPY package.json package-lock.json ./
 
-RUN npm ci --omit=dev \
-  && npm install prisma@7.8.0 --no-save
+RUN npm ci --omit=dev
 
 # ─── Image développement (docker-compose.yml — target: development) ───────────
 FROM base AS development
@@ -61,10 +60,7 @@ WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/generated ./generated
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY docker/entrypoint.prod.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh \
