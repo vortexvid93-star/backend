@@ -7,8 +7,13 @@ import {
   TypeNotification,
 } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
-import { PushService } from '../push/push.service';
+import { PushService, type PushPayload } from '../push/push.service';
 import { isDefiCurrentlyActive } from './challenges-progress.util';
+
+export type ChallengePendingPush = {
+  authId: string;
+  payload: PushPayload;
+};
 
 type DefiRow = {
   id: string;
@@ -71,30 +76,42 @@ export class ChallengesEngineService {
     };
   }
 
+  /** Envoie les push après commit transaction (évite notif sans persistance DB). */
+  dispatchPushes(pushes: ChallengePendingPush[]): void {
+    for (const { authId, payload } of pushes) {
+      void this.pushService.sendToUser(authId, payload);
+    }
+  }
+
   async onBookCompleted(
     tx: Prisma.TransactionClient,
     authId: string,
     livreId: string,
-  ): Promise<void> {
+  ): Promise<ChallengePendingPush[]> {
     const book = await this.loadBookContext(tx, livreId);
-    if (!book) return;
+    if (!book) return [];
 
     const participations = await this.findActiveParticipations(tx, authId);
     const now = new Date();
+    const pushes: ChallengePendingPush[] = [];
 
     for (const row of participations) {
       const delta = this.computeBookCompletionDelta(row.defi, book);
       if (delta <= 0) continue;
-      await this.applyProgressDelta(tx, authId, row, delta, now);
+      pushes.push(
+        ...(await this.applyProgressDelta(tx, authId, row, delta, now)),
+      );
     }
+
+    return pushes;
   }
 
   async onReadingDurationAdded(
     tx: Prisma.TransactionClient,
     authId: string,
     addedMinutes: number,
-  ): Promise<void> {
-    if (addedMinutes <= 0) return;
+  ): Promise<ChallengePendingPush[]> {
+    if (addedMinutes <= 0) return [];
 
     const participations = await tx.userDefi.findMany({
       where: {
@@ -111,9 +128,14 @@ export class ChallengesEngineService {
     });
 
     const now = new Date();
+    const pushes: ChallengePendingPush[] = [];
     for (const row of participations) {
-      await this.applyProgressDelta(tx, authId, row, addedMinutes, now);
+      pushes.push(
+        ...(await this.applyProgressDelta(tx, authId, row, addedMinutes, now)),
+      );
     }
+
+    return pushes;
   }
 
   private computeBookCompletionDelta(
@@ -172,11 +194,11 @@ export class ChallengesEngineService {
     row: { defi_id: string; progression: number; defi: DefiRow },
     delta: number,
     now: Date,
-  ): Promise<void> {
+  ): Promise<ChallengePendingPush[]> {
     const defi = row.defi;
-    if (!isDefiCurrentlyActive(defi.date_debut, defi.date_fin, now)) return;
-    if (delta <= 0) return;
-    if (row.progression >= defi.objectif_valeur) return;
+    if (!isDefiCurrentlyActive(defi.date_debut, defi.date_fin, now)) return [];
+    if (delta <= 0) return [];
+    if (row.progression >= defi.objectif_valeur) return [];
 
     const nextProgression = Math.min(
       row.progression + delta,
@@ -200,8 +222,10 @@ export class ChallengesEngineService {
     });
 
     if (isComplete) {
-      await this.awardOnChallengeComplete(tx, authId, defi);
+      return this.awardOnChallengeComplete(tx, authId, defi);
     }
+
+    return [];
   }
 
   /** Attribue récompenses après complétion (appelé aussi à l'inscription si déjà accompli). */
@@ -209,12 +233,12 @@ export class ChallengesEngineService {
     tx: Prisma.TransactionClient,
     authId: string,
     defi: DefiRow,
-  ): Promise<void> {
+  ): Promise<ChallengePendingPush[]> {
     const auth = await tx.auth.findUnique({
       where: { id: authId },
       select: { personne_id: true },
     });
-    if (!auth) return;
+    if (!auth) return [];
 
     const badge = await tx.badge.findUnique({
       where: { id: defi.badge_id },
@@ -238,11 +262,16 @@ export class ChallengesEngineService {
       },
     });
 
-    void this.pushService.sendToUser(authId, {
-      title: 'Félicitations ! Défi relevé',
-      body: `Bravo ! Vous avez terminé le défi « ${defi.titre} ».`,
-      data: { type: TypeNotification.DEFI },
-    });
+    const pushes: ChallengePendingPush[] = [
+      {
+        authId,
+        payload: {
+          title: 'Félicitations ! Défi relevé',
+          body: `Bravo ! Vous avez terminé le défi « ${defi.titre} ».`,
+          data: { type: TypeNotification.DEFI },
+        },
+      },
+    ];
 
     const existingBadge = await tx.userBadge.findUnique({
       where: {
@@ -263,11 +292,16 @@ export class ChallengesEngineService {
         },
       });
 
-      void this.pushService.sendToUser(authId, {
-        title: 'Nouveau badge !',
-        body: `Badge « ${defi.badge.nom} » débloqué.`,
-        data: { type: TypeNotification.BADGE },
+      pushes.push({
+        authId,
+        payload: {
+          title: 'Nouveau badge !',
+          body: `Badge « ${defi.badge.nom} » débloqué.`,
+          data: { type: TypeNotification.BADGE },
+        },
       });
     }
+
+    return pushes;
   }
 }

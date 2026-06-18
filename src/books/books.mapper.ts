@@ -52,6 +52,7 @@ export function mapLivreCatalogItem(livre: LivreCatalogRow) {
     note_moyenne: livre.statistique?.note_moyenne ?? null,
     nb_lectures: livre.statistique?.nb_lectures ?? 0,
     nb_lectures_7j: livre.statistique?.nb_lectures_7j ?? 0,
+    created_at: livre.createdAt.toISOString(),
   };
 }
 

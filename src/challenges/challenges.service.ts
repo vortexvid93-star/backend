@@ -426,6 +426,10 @@ export class ChallengesService {
     }
 
     const now = new Date();
+    const pendingPushes: Awaited<
+      ReturnType<ChallengesEngineService['awardOnChallengeComplete']>
+    > = [];
+
     const participation = await this.prisma.$transaction(async (tx) => {
       const initialProgress = await computeInitialMissionProgress(
         tx,
@@ -447,14 +451,18 @@ export class ChallengesService {
       });
 
       if (isComplete) {
-        await this.engine.awardOnChallengeComplete(tx, authId, {
-          ...defi,
-          badge: defi.badge,
-        });
+        pendingPushes.push(
+          ...(await this.engine.awardOnChallengeComplete(tx, authId, {
+            ...defi,
+            badge: defi.badge,
+          })),
+        );
       }
 
       return row;
     });
+
+    this.engine.dispatchPushes(pendingPushes);
 
     const analyse_mission = analyzeMission(defi, participation.progression);
 

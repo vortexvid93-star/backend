@@ -55,4 +55,9 @@ export class UpdateAdminBookDto {
   @IsInt()
   @Min(1)
   nombre_pages?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  maison_edition?: string;
 }

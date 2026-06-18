@@ -22,6 +22,38 @@ import type { BooksCatalogQueryDto } from './dto/books-catalog-query.dto';
 export class BooksCatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listCatalogCategories() {
+    const rows = await this.prisma.appartenir.findMany({
+      where: {
+        livre: { statut: StatutLivre.PUBLIE },
+        categorie: { deleted_at: null },
+      },
+      select: {
+        categorie_id: true,
+        categorie: { select: { id: true, nom: true } },
+        livre_id: true,
+      },
+    });
+
+    const byCategory = new Map<string, { id: string; nom: string; nb_livres: number }>();
+
+    for (const row of rows) {
+      const existing = byCategory.get(row.categorie_id);
+      if (existing) {
+        existing.nb_livres += 1;
+      } else {
+        byCategory.set(row.categorie_id, {
+          id: row.categorie.id,
+          nom: row.categorie.nom,
+          nb_livres: 1,
+        });
+      }
+    }
+
+    const data = [...byCategory.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    return { data };
+  }
+
   async listCatalog(authId: string, query: BooksCatalogQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;

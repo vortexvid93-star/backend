@@ -37,6 +37,7 @@ import {
   BooksGenerateAccessDocs,
   BooksGetProgressDocs,
   BooksListCatalogDocs,
+  BooksListCategoriesDocs,
   BooksListCommentsDocs,
   BooksRateDocs,
   BooksRatePatchDocs,
@@ -80,6 +81,13 @@ export class BooksController {
     @Query() query: BooksCatalogQueryDto,
   ) {
     return this.catalog.listCatalog(user.sub, query);
+  }
+
+  @Get('categories')
+  @BooksListCategoriesDocs()
+  @HttpCode(HttpStatus.OK)
+  listCatalogCategories() {
+    return this.catalog.listCatalogCategories();
   }
 
   @Get('access/recent')

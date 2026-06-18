@@ -37,3 +37,26 @@ export const AdminSubscriptionsCancelDocs = () =>
     ApiOkResponse({ type: IdStatutSchema }),
     ApiNotFoundResponse(),
   );
+
+export const AdminSubscriptionsSuspendDocs = () =>
+  applyDecorators(
+    subscriptionIdParam(),
+    ApiOperation({
+      summary: 'Suspendre un abonnement',
+      description: 'Passe le statut à SUSPENDU (abonnement actif uniquement).',
+    }),
+    ApiOkResponse({ type: IdStatutSchema }),
+    ApiNotFoundResponse(),
+  );
+
+export const AdminSubscriptionsActivateDocs = () =>
+  applyDecorators(
+    subscriptionIdParam(),
+    ApiOperation({
+      summary: 'Réactiver un abonnement',
+      description:
+        'Passe le statut à ACTIF (depuis SUSPENDU ou EXPIRE). Prolonge la date de fin si nécessaire.',
+    }),
+    ApiOkResponse({ type: IdStatutSchema }),
+    ApiNotFoundResponse(),
+  );

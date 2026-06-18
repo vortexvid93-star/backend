@@ -31,6 +31,7 @@ export class AdminBookListItemSchema {
   @ApiProperty() is_downloadable: boolean;
   @ApiProperty({ enum: StatutLivre }) statut: StatutLivre;
   @ApiPropertyOptional({ nullable: true }) langue: string | null;
+  @ApiPropertyOptional({ nullable: true }) maison_edition: string | null;
   @ApiProperty() nb_lectures: number;
   @ApiPropertyOptional({ nullable: true }) note_moyenne: number | null;
   @ApiProperty({ type: [AuteurBriefSchema] }) auteurs: AuteurBriefSchema[];
@@ -235,6 +236,29 @@ export class AdminStatsUsersSchema {
   repartition_statut: Record<AuthStatut, number>;
   @ApiProperty() taux_activation: number;
   @ApiProperty() nb_abonnes_actifs: number;
+}
+
+export class AdminStatsActivityItemSchema {
+  @ApiProperty({ enum: ['INSCRIPTION', 'PAIEMENT'] })
+  type: 'INSCRIPTION' | 'PAIEMENT';
+  @ApiProperty({ format: 'date-time' }) date: string;
+  @ApiPropertyOptional({ format: 'uuid' }) auth_id?: string;
+  @ApiPropertyOptional({ format: 'email' }) email?: string;
+  @ApiPropertyOptional() nom?: string;
+  @ApiPropertyOptional() prenom?: string;
+  @ApiPropertyOptional({ enum: AuthProvider }) auth_provider?: AuthProvider;
+  @ApiPropertyOptional() statut?: string;
+  @ApiPropertyOptional({ format: 'uuid' }) id?: string;
+  @ApiPropertyOptional() montant?: number;
+  @ApiPropertyOptional() devise?: string;
+  @ApiPropertyOptional({ nullable: true }) operateur?: string | null;
+  @ApiPropertyOptional({ enum: PlanType }) plan?: PlanType;
+}
+
+export class PaginatedAdminStatsActivitySchema {
+  @ApiProperty({ type: [AdminStatsActivityItemSchema] })
+  data: AdminStatsActivityItemSchema[];
+  @ApiProperty({ type: PaginationMetaSchema }) meta: PaginationMetaSchema;
 }
 
 export class AdminStatsSearchTermItemSchema {

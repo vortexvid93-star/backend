@@ -5,6 +5,7 @@ import {
   AdminStatsDashboardSchema,
   AdminStatsSearchTermsSchema,
   AdminStatsUsersSchema,
+  PaginatedAdminStatsActivitySchema,
   PaginatedAdminStatsBooksSchema,
 } from '../../common/swagger/schemas/admin.schema';
 
@@ -48,4 +49,14 @@ export const AdminStatsSearchTermsDocs = () =>
         'Basé sur `HistoriqueRecherche`. `periode` 7j|30j. `no_results=true` : termes dont toutes les recherches ont eu 0 résultat.',
     }),
     ApiOkResponse({ type: AdminStatsSearchTermsSchema }),
+  );
+
+export const AdminStatsActivityDocs = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Activité récente (inscriptions et paiements)',
+      description:
+        'Fil chronologique des nouvelles inscriptions utilisateurs et des paiements. `periode` : 7j | 30j | 90j (défaut 7j). `type` : INSCRIPTION | PAIEMENT.',
+    }),
+    ApiOkResponse({ type: PaginatedAdminStatsActivitySchema }),
   );

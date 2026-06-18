@@ -52,7 +52,7 @@ export function mapMaParticipation(
 
 export function mapChallengeListItem(
   defi: DefiWithBadge,
-  participation: Pick<UserDefi, 'progression' | 'statut'> | null | undefined,
+  participation: Pick<UserDefi, 'progression' | 'statut' | 'date_completion'> | null | undefined,
 ) {
   return {
     id: defi.id,
@@ -64,9 +64,7 @@ export function mapChallengeListItem(
     date_debut: defi.date_debut.toISOString(),
     date_fin: defi.date_fin.toISOString(),
     badge: mapBadgeSummary(defi.badge),
-    ma_participation: participation
-      ? { progression: participation.progression, statut: participation.statut }
-      : null,
+    ma_participation: mapMaParticipation(participation),
   };
 }
 

@@ -81,49 +81,62 @@ export class BooksProgressService {
       nombrePages != null && nombrePages > 0 && pageCible >= nombrePages;
     const wasNotTermine = progression.statut !== StatutProgression.TERMINE;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.progressionLecture.update({
-        where: { id: progression.id },
-        data: {
-          page_actuelle: pageCible,
-          pourcentage,
-          ...(dto.duree_lecture_min !== undefined
-            ? { duree_lecture_min: { increment: dto.duree_lecture_min } }
-            : {}),
-          derniere_maj: new Date(),
-          ...(isComplete
-            ? {
-                statut: StatutProgression.TERMINE,
-                date_fin: new Date(),
-              }
-            : {}),
-        },
-      });
+    const pendingPushes: Awaited<
+      ReturnType<ChallengesEngineService['onBookCompleted']>
+    > = [];
 
-      if (isComplete && wasNotTermine) {
-        await tx.statistiqueLivre.upsert({
-          where: { livre_id: livreId },
-          create: { livre_id: livreId, nb_terminees: 1 },
-          update: { nb_terminees: { increment: 1 } },
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const row = await tx.progressionLecture.update({
+          where: { id: progression.id },
+          data: {
+            page_actuelle: pageCible,
+            pourcentage,
+            ...(dto.duree_lecture_min !== undefined
+              ? { duree_lecture_min: { increment: dto.duree_lecture_min } }
+              : {}),
+            derniere_maj: new Date(),
+            ...(isComplete
+              ? {
+                  statut: StatutProgression.TERMINE,
+                  date_fin: new Date(),
+                }
+              : {}),
+          },
         });
 
-        await this.challengesEngine.onBookCompleted(tx, authId, livreId);
-        void this.recommendationsEngine.refreshAfterBookCompleted(
-          authId,
-          livreId,
-        );
-      }
+        if (isComplete && wasNotTermine) {
+          await tx.statistiqueLivre.upsert({
+            where: { livre_id: livreId },
+            create: { livre_id: livreId, nb_terminees: 1 },
+            update: { nb_terminees: { increment: 1 } },
+          });
 
-      if (dto.duree_lecture_min !== undefined && dto.duree_lecture_min > 0) {
-        await this.challengesEngine.onReadingDurationAdded(
-          tx,
-          authId,
-          dto.duree_lecture_min,
-        );
-      }
+          pendingPushes.push(
+            ...(await this.challengesEngine.onBookCompleted(tx, authId, livreId)),
+          );
+          void this.recommendationsEngine.refreshAfterBookCompleted(
+            authId,
+            livreId,
+          );
+        }
 
-      return row;
-    });
+        if (dto.duree_lecture_min !== undefined && dto.duree_lecture_min > 0) {
+          pendingPushes.push(
+            ...(await this.challengesEngine.onReadingDurationAdded(
+              tx,
+              authId,
+              dto.duree_lecture_min,
+            )),
+          );
+        }
+
+        return row;
+      },
+      { timeout: 15_000 },
+    );
+
+    this.challengesEngine.dispatchPushes(pendingPushes);
 
     // Mise à jour streak + objectif quotidien (fire-and-forget, hors transaction)
     if (dto.duree_lecture_min && dto.duree_lecture_min > 0) {

@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import {
   getPawaPayCallbackUrls,
+  isPawaPayCallbackOnly,
   isPawaPayProduction,
   resolvePawaPayApiBase,
   resolvePawaPayPublicBase,
+  resolvePawaPayReconcileDelaysMs,
 } from './providers/pawapay/pawapay.config';
 
 @Injectable()
@@ -30,12 +32,23 @@ export class PawaPayBootstrapService implements OnModuleInit {
     );
     const callbacks = publicBase ? getPawaPayCallbackUrls(publicBase) : null;
 
+    const callbackOnly = isPawaPayCallbackOnly(this.config);
+    const reconcileDelaysMs = resolvePawaPayReconcileDelaysMs(this.config);
+    const reconcileLabel = reconcileDelaysMs
+      .map((ms) => `${ms / 1000}s`)
+      .join(', ');
+
     this.logger.log(
       [
         'PawaPay actif',
         `environnement=${prod ? 'PRODUCTION' : 'SANDBOX'}`,
         `api=${apiBase}`,
         `token=${tokenSet ? 'oui' : 'NON (PAWAPAY_API_TOKEN manquant)'}`,
+        `validation=${
+          callbackOnly
+            ? 'CALLBACK_UNIQUEMENT'
+            : `hybride (callback + fallback API ${reconcileLabel})`
+        }`,
         callbacks
           ? `callback_deposits=${callbacks.deposits}`
           : 'public_base=NON (PAWAPAY_PUBLIC_BASE_URL requis pour callbacks)',

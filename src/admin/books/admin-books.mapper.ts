@@ -35,6 +35,7 @@ export function mapAdminBookListItem(livre: LivreCatalogRow) {
     langue: livre.langue,
     annee_publication: livre.annee_publication,
     nombre_pages: livre.nombre_pages,
+    maison_edition: livre.maison_edition,
     url_externe_livre: livre.url_externe_livre,
     nb_lectures: livre.statistique?.nb_lectures ?? 0,
     note_moyenne: livre.statistique?.note_moyenne ?? null,

@@ -119,6 +119,7 @@ export class AdminBooksService {
             langue: dto.langue?.trim() || 'Français',
             annee_publication: dto.annee_publication ?? null,
             nombre_pages: dto.nombre_pages ?? null,
+            maison_edition: dto.maison_edition?.trim() || null,
             statut: StatutLivre.PUBLIE,
           },
         });
@@ -218,6 +219,9 @@ export class AdminBooksService {
     }
     if (dto.nombre_pages !== undefined) {
       data.nombre_pages = dto.nombre_pages;
+    }
+    if (dto.maison_edition !== undefined) {
+      data.maison_edition = dto.maison_edition.trim() || null;
     }
 
     if (Object.keys(data).length === 0) {

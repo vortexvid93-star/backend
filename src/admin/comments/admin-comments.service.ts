@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   StatutCommentaire,
   TypeNotification,
@@ -81,6 +81,50 @@ export class AdminCommentsService {
 
     void this.pushService.sendToUser(comment.auth_id, {
       title: 'Commentaire modéré',
+      body: contenuNotif,
+      data: { type: TypeNotification.SYSTEME },
+    });
+
+    return { id: updated.id, statut: updated.statut };
+  }
+
+  async republishComment(id: string) {
+    const comment = await this.prisma.commentaire.findUnique({
+      where: { id },
+    });
+    if (!comment) {
+      throw new NotFoundException('Commentaire introuvable.');
+    }
+
+    if (comment.statut !== StatutCommentaire.MODERE) {
+      throw new BadRequestException(
+        'Seuls les commentaires modérés peuvent être republiés.',
+      );
+    }
+
+    const contenuNotif =
+      'Votre commentaire a été republié et est à nouveau visible par les lecteurs.';
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.commentaire.update({
+        where: { id },
+        data: { statut: StatutCommentaire.PUBLIE },
+      });
+
+      await tx.notification.create({
+        data: {
+          auth_id: comment.auth_id,
+          type: TypeNotification.SYSTEME,
+          titre: 'Commentaire republié',
+          contenu: contenuNotif,
+        },
+      });
+
+      return row;
+    });
+
+    void this.pushService.sendToUser(comment.auth_id, {
+      title: 'Commentaire republié',
       body: contenuNotif,
       data: { type: TypeNotification.SYSTEME },
     });

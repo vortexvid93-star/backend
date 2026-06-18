@@ -89,6 +89,7 @@ enum StatutAbonnement {
   ACTIF
   EXPIRE
   ANNULE
+  SUSPENDU
 }
 
 enum TypeRenouvellement {
@@ -272,6 +273,7 @@ model Livre {
   langue               String      @default("Français") @db.VarChar(50)
   annee_publication    Int?
   nombre_pages         Int?
+  maison_edition       String?     @db.VarChar(200)
   statut               StatutLivre @default(PUBLIE)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @default(now()) @updatedAt

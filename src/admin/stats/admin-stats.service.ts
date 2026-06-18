@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AuthProvider,
+  AuthRole,
   AuthStatut,
   StatutAbonnement,
   StatutLivre,
@@ -17,6 +18,10 @@ import {
 import type { AdminStatsBooksQueryDto } from './dto/admin-stats-books-query.dto';
 import type { AdminStatsSearchTermsQueryDto } from './dto/admin-stats-search-terms-query.dto';
 import type { AdminStatsUsersQueryDto } from './dto/admin-stats-users-query.dto';
+import {
+  AdminActivityType,
+  type AdminStatsActivityQueryDto,
+} from './dto/admin-stats-activity-query.dto';
 
 function activeAbonnementsWhere(at: Date) {
   return {
@@ -268,5 +273,136 @@ export class AdminStatsService {
       .slice(0, 10);
 
     return { data, top_sans_resultats };
+  }
+
+  async getActivity(query: AdminStatsActivityQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const fetchSize = page * limit;
+    const jours = parsePeriodeJours(query.periode, '7j');
+    const since = dateDepuisJours(jours);
+
+    const includeInscriptions =
+      !query.type || query.type === AdminActivityType.INSCRIPTION;
+    const includePaiements =
+      !query.type || query.type === AdminActivityType.PAIEMENT;
+
+    type ActivityRow = {
+      type: AdminActivityType;
+      date: Date;
+      payload: Record<string, unknown>;
+    };
+
+    const fetches: Promise<ActivityRow[]>[] = [];
+
+    if (includeInscriptions) {
+      fetches.push(
+        this.prisma.auth
+          .findMany({
+            where: {
+              role: AuthRole.USER,
+              date_inscription: { gte: since },
+            },
+            orderBy: { date_inscription: 'desc' },
+            take: fetchSize,
+            include: {
+              personne: { select: { nom: true, prenom: true } },
+            },
+          })
+          .then((rows) =>
+            rows.map((row) => ({
+              type: AdminActivityType.INSCRIPTION as const,
+              date: row.date_inscription,
+              payload: {
+                auth_id: row.id,
+                email: row.email,
+                nom: row.personne.nom,
+                prenom: row.personne.prenom,
+                auth_provider: row.auth_provider,
+                statut: row.statut,
+              },
+            })),
+          ),
+      );
+    }
+
+    if (includePaiements) {
+      fetches.push(
+        this.prisma.paiement
+          .findMany({
+            where: { createdAt: { gte: since } },
+            orderBy: { createdAt: 'desc' },
+            take: fetchSize,
+            include: {
+              auth: {
+                select: {
+                  id: true,
+                  email: true,
+                  personne: { select: { nom: true, prenom: true } },
+                },
+              },
+              plan: { select: { plan: true } },
+            },
+          })
+          .then((rows) =>
+            rows.map((row) => ({
+              type: AdminActivityType.PAIEMENT as const,
+              date: row.createdAt,
+              payload: {
+                id: row.id,
+                auth_id: row.auth.id,
+                email: row.auth.email,
+                nom: row.auth.personne.nom,
+                prenom: row.auth.personne.prenom,
+                montant: Number(row.montant),
+                devise: row.devise,
+                statut: row.statut,
+                operateur: row.operateur,
+                plan: row.plan.plan,
+              },
+            })),
+          ),
+      );
+    }
+
+    const merged = (await Promise.all(fetches))
+      .flat()
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const skip = (page - 1) * limit;
+    const slice = merged.slice(skip, skip + limit);
+
+    const countPromises: Promise<number>[] = [];
+    if (includeInscriptions) {
+      countPromises.push(
+        this.prisma.auth.count({
+          where: {
+            role: AuthRole.USER,
+            date_inscription: { gte: since },
+          },
+        }),
+      );
+    }
+    if (includePaiements) {
+      countPromises.push(
+        this.prisma.paiement.count({
+          where: { createdAt: { gte: since } },
+        }),
+      );
+    }
+
+    const counts = await Promise.all(countPromises);
+    const total = query.type
+      ? (counts[0] ?? 0)
+      : counts.reduce((sum, n) => sum + n, 0);
+
+    return {
+      data: slice.map((item) => ({
+        type: item.type,
+        date: item.date.toISOString(),
+        ...item.payload,
+      })),
+      meta: buildPaginationMeta(page, limit, total),
+    };
   }
 }

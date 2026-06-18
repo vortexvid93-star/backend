@@ -20,6 +20,7 @@ import {
   AdminCommentsDeleteDocs,
   AdminCommentsListDocs,
   AdminCommentsModerateDocs,
+  AdminCommentsRepublishDocs,
 } from './admin-comments.controller.docs';
 import { AdminCommentsService } from './admin-comments.service';
 import { AdminCommentsQueryDto } from './dto/admin-comments-query.dto';
@@ -47,6 +48,13 @@ export class AdminCommentsController {
     @Body() dto: ModerateCommentDto,
   ) {
     return this.adminCommentsService.moderateComment(id, dto);
+  }
+
+  @Patch(':id/republish')
+  @AdminCommentsRepublishDocs()
+  @HttpCode(HttpStatus.OK)
+  republishComment(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminCommentsService.republishComment(id);
   }
 
   @Delete(':id')

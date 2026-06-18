@@ -23,11 +23,13 @@ import {
 } from './subscription-query.util';
 import { SubscriptionsService } from './subscriptions.service';
 import { PushService } from '../push/push.service';
-import { resolvePawaPayPublicBase } from './providers/pawapay/pawapay.config';
+import {
+  isPawaPayCallbackOnly,
+  resolvePawaPayPublicBase,
+  resolvePawaPayReconcileDelayMs,
+  resolvePawaPayReconcileDelaysMs,
+} from './providers/pawapay/pawapay.config';
 import { decodePawaPayOperateur } from './providers/pawapay/pawapay-operateur.util';
-
-/** Délais de réconciliation auto si le callback PawaPay est lent ou perdu. */
-const PAWAPAY_RECONCILE_MS = [3_000, 8_000, 20_000] as const;
 
 @Injectable()
 export class PaymentsService {
@@ -119,12 +121,21 @@ export class PaymentsService {
       }
 
       if (this.providerFactory.isPawaPayMode()) {
-        this.schedulePawaPayReconciliation(ref_transaction);
+        const callbackOnly = isPawaPayCallbackOnly(this.config);
+        const reconcileDelaysMs = resolvePawaPayReconcileDelaysMs(this.config);
+        if (!callbackOnly) {
+          this.schedulePawaPayReconciliation(ref_transaction, reconcileDelaysMs);
+        }
         const depositId = decodePawaPayOperateur(
           initResult.provider_meta?.operateur,
         )?.depositId;
+        const delaysLabel = reconcileDelaysMs
+          .map((ms) => `${ms / 1000}s`)
+          .join(', ');
         this.logger.log(
-          `PawaPay init OK ref=${ref_transaction} depositId=${depositId ?? '?'} — callback + réconciliation auto programmés`,
+          callbackOnly
+            ? `PawaPay init OK ref=${ref_transaction} depositId=${depositId ?? '?'} — attente callback uniquement (PAWAPAY_CALLBACK_ONLY)`
+            : `PawaPay init OK ref=${ref_transaction} depositId=${depositId ?? '?'} — callback prioritaire, fallback API à ${delaysLabel}`,
         );
       }
 
@@ -142,8 +153,9 @@ export class PaymentsService {
         return {
           ...base,
           statut: StatutPaiement.EN_ATTENTE,
-          message:
-            'Dépôt initié chez PawaPay. Confirmation automatique par callback (quelques secondes en sandbox). Utilisez GET /payments/status pour suivre.',
+          message: isPawaPayCallbackOnly(this.config)
+            ? 'Dépôt initié chez PawaPay. En attente du callback PawaPay (mode test). Utilisez GET /payments/status pour suivre.'
+            : `Dépôt initié chez PawaPay. Confirmation par callback (prioritaire) ou vérification API à ${resolvePawaPayReconcileDelaysMs(this.config).map((ms) => `${ms / 1000}s`).join(', ')}. Utilisez GET /payments/status pour suivre.`,
           pawapay: {
             deposit_id: depositId,
             initiation_accepted: true,
@@ -191,7 +203,9 @@ export class PaymentsService {
 
     if (
       paiement.statut === StatutPaiement.EN_ATTENTE &&
-      this.providerFactory.isPawaPayMode()
+      this.providerFactory.isPawaPayMode() &&
+      !isPawaPayCallbackOnly(this.config) &&
+      this.isPawaPayReconcileDue(paiement.createdAt)
     ) {
       await this.handleWebhook(ref);
       const refreshed = await this.prisma.paiement.findUniqueOrThrow({
@@ -409,6 +423,11 @@ export class PaymentsService {
         operateur: paiement.operateur?.split('#')[0] ?? undefined,
         numero_telephone: paiement.numero_telephone ?? undefined,
       };
+    } else if (isPawaPayCallbackOnly(this.config)) {
+      this.logger.log(
+        `handleWebhook ref=${ref} ignoré — mode callback uniquement (PAWAPAY_CALLBACK_ONLY), pas de polling API`,
+      );
+      return;
     } else {
       this.logger.log(`handleWebhook ref=${ref} source=api_check`);
       try {
@@ -451,8 +470,11 @@ export class PaymentsService {
   }
 
   /** Filet : interroge PawaPay si le callback n’est pas encore arrivé. */
-  private schedulePawaPayReconciliation(ref_transaction: string): void {
-    for (const delayMs of PAWAPAY_RECONCILE_MS) {
+  private schedulePawaPayReconciliation(
+    ref_transaction: string,
+    delayMsList: readonly number[],
+  ): void {
+    for (const delayMs of delayMsList) {
       setTimeout(() => {
         void this.handleWebhook(ref_transaction).catch((error) => {
           this.logger.error(
@@ -462,6 +484,11 @@ export class PaymentsService {
         });
       }, delayMs);
     }
+  }
+
+  private isPawaPayReconcileDue(createdAt: Date): boolean {
+    const delayMs = resolvePawaPayReconcileDelayMs(this.config);
+    return Date.now() - createdAt.getTime() >= delayMs;
   }
 
   private async activateSubscription(

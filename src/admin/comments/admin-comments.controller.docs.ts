@@ -41,6 +41,18 @@ export const AdminCommentsModerateDocs = () =>
     ApiNotFoundResponse(),
   );
 
+export const AdminCommentsRepublishDocs = () =>
+  applyDecorators(
+    commentIdParam(),
+    ApiOperation({
+      summary: 'Republier un commentaire modéré',
+      description:
+        'Passe `statut=PUBLIE` depuis `MODERE`. Notification SYSTEME envoyée à l’auteur.',
+    }),
+    ApiOkResponse({ type: IdStatutSchema }),
+    ApiNotFoundResponse(),
+  );
+
 export const AdminCommentsDeleteDocs = () =>
   applyDecorators(
     commentIdParam(),

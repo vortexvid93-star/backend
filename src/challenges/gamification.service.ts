@@ -32,6 +32,7 @@ export class GamificationService {
             nom: true,
             prenom: true,
             points: true,
+            streak_actuel: true,
             photo_profil_url: true,
           },
         },
@@ -46,12 +47,14 @@ export class GamificationService {
       nom: row.personne.nom,
       prenom: row.personne.prenom,
       points: row.personne.points,
+      streak_actuel: row.personne.streak_actuel,
       photo_profil_url: row.personne.photo_profil_url,
       is_current_user: row.id === authId,
     }));
 
     const current = data.find((r) => r.is_current_user);
     let current_user_rank: number | null = current?.rank ?? null;
+    let current_user_points: number | null = current?.points ?? null;
 
     if (!current) {
       const me = await this.prisma.auth.findUnique({
@@ -59,6 +62,7 @@ export class GamificationService {
         include: { personne: { select: { points: true } } },
       });
       if (me?.personne) {
+        current_user_points = me.personne.points;
         const ahead = await this.prisma.personne.count({
           where: {
             deleted_at: null,
@@ -73,7 +77,7 @@ export class GamificationService {
     return {
       data,
       current_user_rank,
-      current_user_points: current?.points ?? null,
+      current_user_points,
     };
   }
 

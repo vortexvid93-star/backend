@@ -14,10 +14,12 @@ import {
   AdminStatsBooksDocs,
   AdminStatsControllerDocs,
   AdminStatsDashboardDocs,
+  AdminStatsActivityDocs,
   AdminStatsSearchTermsDocs,
   AdminStatsUsersDocs,
 } from './admin-stats.controller.docs';
 import { AdminStatsService } from './admin-stats.service';
+import { AdminStatsActivityQueryDto } from './dto/admin-stats-activity-query.dto';
 import { AdminStatsBooksQueryDto } from './dto/admin-stats-books-query.dto';
 import { AdminStatsSearchTermsQueryDto } from './dto/admin-stats-search-terms-query.dto';
 import { AdminStatsUsersQueryDto } from './dto/admin-stats-users-query.dto';
@@ -55,5 +57,12 @@ export class AdminStatsController {
   @HttpCode(HttpStatus.OK)
   getSearchTermsStats(@Query() query: AdminStatsSearchTermsQueryDto) {
     return this.adminStatsService.getSearchTermsStats(query);
+  }
+
+  @Get('activity')
+  @AdminStatsActivityDocs()
+  @HttpCode(HttpStatus.OK)
+  getActivity(@Query() query: AdminStatsActivityQueryDto) {
+    return this.adminStatsService.getActivity(query);
   }
 }

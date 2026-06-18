@@ -45,6 +45,34 @@ export const BooksListCatalogDocs = () =>
     ApiOkResponse({ type: PaginatedLivreCatalogSchema }),
   );
 
+export const BooksListCategoriesDocs = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Catégories du catalogue',
+      description:
+        'Liste les catégories associées à au moins un livre publié, avec le nombre de livres par catégorie. ' +
+        '**Frontend** : chips de filtre sur la page Explorer.',
+    }),
+    ApiOkResponse({
+      schema: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                nom: { type: 'string' },
+                nb_livres: { type: 'number' },
+              },
+            },
+          },
+        },
+      },
+    }),
+  );
+
 export const BooksRecentAccessDocs = () =>
   applyDecorators(
     ApiOperation({
