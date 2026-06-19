@@ -55,8 +55,12 @@ export class AuthService {
       config.get<string>('GOOGLE_ANDROID_CLIENT_ID'),
       config.get<string>('GOOGLE_IOS_CLIENT_ID'),
     ]
-      .map((v) => v?.trim())
-      .filter(Boolean) as string[];
+      .flatMap((value) =>
+        value
+          ?.split(',')
+          .map((part) => part.trim())
+          .filter(Boolean) ?? [],
+      );
     this.googleAudiences = [...new Set([this.googleClientId, ...extra])];
     this.googleClient = new OAuth2Client(this.googleClientId);
   }
