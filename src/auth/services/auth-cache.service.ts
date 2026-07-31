@@ -27,10 +27,21 @@ export class AuthCacheService {
   }
 
   incrementOtpVerifyAttempts(email: string): number {
-    const key = `otp:verify:${email}`;
+    return this.incrementAttempts(
+      `otp:verify:${email}`,
+      AUTH_CONSTANTS.OTP_VERIFY_WINDOW_MINUTES * 60,
+    );
+  }
+
+  /**
+   * Compteur générique de tentatives à fenêtre glissante — réutilisable pour
+   * tout rate-limit applicatif simple (ex. tentatives de code d'invitation
+   * établissement), sur le même principe que la blacklist JWT.
+   */
+  incrementAttempts(key: string, windowSeconds: number): number {
     const current = this.get(key);
     const count = current ? parseInt(current, 10) + 1 : 1;
-    this.set(key, String(count), AUTH_CONSTANTS.OTP_VERIFY_WINDOW_MINUTES * 60);
+    this.set(key, String(count), windowSeconds);
     return count;
   }
 

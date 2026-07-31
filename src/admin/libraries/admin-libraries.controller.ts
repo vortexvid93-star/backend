@@ -22,6 +22,7 @@ import {
   AdminLibrariesUnarchiveDocs,
   AdminLibrariesControllerDocs,
   AdminLibrariesCreateDocs,
+  AdminLibrariesDeleteDocs,
   AdminLibrariesListDocs,
   AdminLibrariesRemoveBookDocs,
   AdminLibrariesUpdateDocs,
@@ -95,5 +96,12 @@ export class AdminLibrariesController {
     @Body() dto: UpdateAdminLibraryDto,
   ) {
     return this.adminLibrariesService.updateLibrary(id, dto);
+  }
+
+  @Delete(':id')
+  @AdminLibrariesDeleteDocs()
+  @HttpCode(HttpStatus.OK)
+  deleteLibrary(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminLibrariesService.deleteLibrary(id);
   }
 }

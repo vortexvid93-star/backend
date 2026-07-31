@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import { activeSubscriptionWhere } from '../payments/subscription-query.util';
+import { hasActiveEtablissementMembership } from '../etablissements/etablissement-access.util';
 
 export async function assertActiveSubscription(
   prisma: PrismaService,
@@ -10,7 +11,9 @@ export async function assertActiveSubscription(
     where: activeSubscriptionWhere(authId),
   });
 
-  if (!abonnement) {
-    throw new ForbiddenException('Abonnement actif requis.');
-  }
+  if (abonnement) return;
+
+  if (await hasActiveEtablissementMembership(prisma, authId)) return;
+
+  throw new ForbiddenException('Abonnement actif requis.');
 }

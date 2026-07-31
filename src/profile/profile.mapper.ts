@@ -1,9 +1,12 @@
 import type {
   Abonnement,
   Auth,
+  Etablissement,
   Personne,
   PlanAbonnement,
 } from '../../generated/prisma/client';
+
+type EtablissementMembreActif = { etablissement: Etablissement } | null;
 
 export function formatDateOnly(value: Date | null): string | null {
   if (!value) return null;
@@ -43,10 +46,59 @@ export function mapAbonnementActif(
   };
 }
 
+/**
+ * Objet `abonnement_actif` synthétique pour un membre établissement, utilisé
+ * quand l'utilisateur n'a aucun abonnement individuel payant. `plan` porte le
+ * nom de l'école pour affichage direct côté mobile (`plan.startsWith('Établissement')`).
+ */
+function mapEtablissementAbonnementActif(etablissement: Etablissement) {
+  const now = Date.now();
+  const fin = etablissement.date_fin.getTime();
+  const jours_restants = Math.max(
+    0,
+    Math.ceil((fin - now) / (1000 * 60 * 60 * 24)),
+  );
+
+  return {
+    id: etablissement.id,
+    plan: `Établissement · ${etablissement.nom}`,
+    date_debut: etablissement.date_debut.toISOString(),
+    date_fin: etablissement.date_fin.toISOString(),
+    jours_restants,
+  };
+}
+
+/**
+ * Résout `abonnement_actif` : abonnement individuel payant en priorité, sinon
+ * repli sur un membership établissement actif — logique partagée entre
+ * `mapFullProfile` (`GET /me`) et `mapDashboardProfile` (`GET /me/dashboard`)
+ * pour que le statut premium soit cohérent entre les deux écrans mobiles.
+ */
+function resolveAbonnementActif(
+  abonnement: (Abonnement & { plan: PlanAbonnement }) | null,
+  etablissementMembre: EtablissementMembreActif,
+) {
+  if (abonnement) return mapAbonnementActif(abonnement);
+  if (
+    etablissementMembre &&
+    etablissementMembre.etablissement.statut === 'ACTIF' &&
+    etablissementMembre.etablissement.date_fin > new Date()
+  ) {
+    return mapEtablissementAbonnementActif(etablissementMembre.etablissement);
+  }
+  return null;
+}
+
 export function mapFullProfile(
   auth: Auth & { personne: Personne },
   abonnement: (Abonnement & { plan: PlanAbonnement }) | null,
+  etablissementMembre: EtablissementMembreActif = null,
 ) {
+  const abonnement_actif = resolveAbonnementActif(
+    abonnement,
+    etablissementMembre,
+  );
+
   return {
     id: auth.id,
     email: auth.email,
@@ -58,13 +110,14 @@ export function mapFullProfile(
     date_inscription: auth.date_inscription.toISOString(),
     derniere_connexion: auth.derniere_connexion?.toISOString() ?? null,
     personne: mapPersonne(auth.personne),
-    abonnement_actif: abonnement ? mapAbonnementActif(abonnement) : null,
+    abonnement_actif,
   };
 }
 
 export function mapDashboardProfile(
   auth: Auth & { personne: Personne },
   abonnement: (Abonnement & { plan: PlanAbonnement }) | null,
+  etablissementMembre: EtablissementMembreActif = null,
 ) {
   return {
     id: auth.id,
@@ -74,7 +127,7 @@ export function mapDashboardProfile(
     photo_profil_url: auth.personne.photo_profil_url,
     points: auth.personne.points,
     email_verified: auth.email_verified,
-    abonnement_actif: abonnement ? mapAbonnementActif(abonnement) : null,
+    abonnement_actif: resolveAbonnementActif(abonnement, etablissementMembre),
   };
 }
 

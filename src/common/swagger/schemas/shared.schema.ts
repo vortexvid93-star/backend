@@ -53,6 +53,10 @@ export class IdStatutSchema {
   @ApiProperty() statut: string;
 }
 
+export class IdOnlySchema {
+  @ApiProperty({ format: 'uuid' }) id: string;
+}
+
 export class IdUpdatedAtSchema {
   @ApiProperty({ format: 'uuid' }) id: string;
   @ApiProperty({ format: 'date-time' }) updatedAt: string;

@@ -14,6 +14,7 @@ import { RecommendationsService } from '../discovery/recommendations.service';
 import { computeProgressPercent } from '../challenges/challenges-progress.util';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { activeSubscriptionWhere } from '../payments/subscription-query.util';
+import { findActiveEtablissementMembre } from '../etablissements/etablissement-access.util';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityType, type ActivityQueryDto } from './dto/activity-query.dto';
@@ -47,8 +48,11 @@ export class ProfileService {
 
   async getProfile(authId: string) {
     const auth = await this.findAuthWithActivePersonne(authId);
-    const abonnement = await this.findActiveAbonnement(authId);
-    return mapFullProfile(auth, abonnement);
+    const [abonnement, etablissementMembre] = await Promise.all([
+      this.findActiveAbonnement(authId),
+      findActiveEtablissementMembre(this.prisma, authId),
+    ]);
+    return mapFullProfile(auth, abonnement, etablissementMembre);
   }
 
   async updateProfile(authId: string, dto: UpdateProfileDto) {
@@ -340,6 +344,7 @@ export class ProfileService {
 
     const [
       abonnement,
+      etablissementMembre,
       stats,
       challengesSummary,
       nb_notifications_non_lues,
@@ -347,6 +352,7 @@ export class ProfileService {
       recos,
     ] = await Promise.all([
       this.findActiveAbonnement(authId),
+      findActiveEtablissementMembre(this.prisma, authId),
       this.buildStatsSnapshot(authId, auth.personne.points),
       this.buildChallengesSummarySnapshot(authId, now),
       this.prisma.notification.count({
@@ -361,7 +367,7 @@ export class ProfileService {
     ]);
 
     return {
-      profil: mapDashboardProfile(auth, abonnement),
+      profil: mapDashboardProfile(auth, abonnement, etablissementMembre),
       stats,
       defis: challengesSummary,
       nb_notifications_non_lues,
@@ -789,38 +795,45 @@ export class ProfileService {
   }
 
   async getStatsReading(authId: string) {
-    const [termines, allProgressions, streakRows] = await Promise.all([
-      this.prisma.progressionLecture.findMany({
-        where: {
-          auth_id: authId,
-          statut: StatutProgression.TERMINE,
-          date_fin: { not: null },
-        },
-        select: {
-          date_fin: true,
-          duree_lecture_min: true,
-          livre: {
-            include: {
-              appartenir: {
-                include: { categorie: { select: { id: true, nom: true } } },
+    const [termines, allProgressions, toutesProgressionsAgg, streakRows] =
+      await Promise.all([
+        this.prisma.progressionLecture.findMany({
+          where: {
+            auth_id: authId,
+            statut: StatutProgression.TERMINE,
+            date_fin: { not: null },
+          },
+          select: {
+            date_fin: true,
+            duree_lecture_min: true,
+            livre: {
+              include: {
+                appartenir: {
+                  include: { categorie: { select: { id: true, nom: true } } },
+                },
               },
             },
           },
-        },
-      }),
-      this.prisma.progressionLecture.aggregate({
-        where: { auth_id: authId, statut: StatutProgression.TERMINE },
-        _avg: { duree_lecture_min: true },
-        _sum: { duree_lecture_min: true },
-        _count: true,
-      }),
-      this.prisma.progressionLecture.findMany({
-        where: { auth_id: authId },
-        select: { derniere_maj: true },
-        orderBy: { derniere_maj: 'desc' },
-        take: 365,
-      }),
-    ]);
+        }),
+        this.prisma.progressionLecture.aggregate({
+          where: { auth_id: authId, statut: StatutProgression.TERMINE },
+          _avg: { duree_lecture_min: true },
+          _count: true,
+        }),
+        // Temps de lecture réel : toutes les progressions (livres en cours
+        // inclus), pas seulement celles terminées — sinon un lecteur actif
+        // qui n'a encore rien terminé voit « 0 » en temps de lecture.
+        this.prisma.progressionLecture.aggregate({
+          where: { auth_id: authId },
+          _sum: { duree_lecture_min: true },
+        }),
+        this.prisma.progressionLecture.findMany({
+          where: { auth_id: authId },
+          select: { derniere_maj: true },
+          orderBy: { derniere_maj: 'desc' },
+          take: 365,
+        }),
+      ]);
 
     const dureeTotale = termines.reduce((s, r) => s + r.duree_lecture_min, 0);
     const nbTermines = termines.length;
@@ -836,7 +849,7 @@ export class ProfileService {
       ),
       resume: {
         total_livres_termines: allProgressions._count,
-        duree_totale_min: allProgressions._sum.duree_lecture_min ?? 0,
+        duree_totale_min: toutesProgressionsAgg._sum.duree_lecture_min ?? 0,
         duree_moyenne_min: Math.round(
           allProgressions._avg.duree_lecture_min ?? 0,
         ),

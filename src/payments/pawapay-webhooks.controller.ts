@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  forwardRef,
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Logger,
   Post,
   Res,
@@ -11,11 +13,17 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { SWAGGER_TAGS } from '../common/swagger/constants';
+import { EtablissementPaymentsService } from '../etablissements/etablissement-payments.service';
+import { ETABLISSEMENT_REF_PREFIX } from '../etablissements/etablissement-payments.service';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
+import { PAYMENTS_CONSTANTS } from './payments.constants';
 import { PaymentsService } from './payments.service';
 
 /**
  * Callbacks PawaPay (dashboard) — préfixe `/api` pour correspondre aux URLs ngrok.
+ * Une seule URL de webhook, routée par préfixe de `clientReferenceId` vers le
+ * service concerné (`BIBLIO-` = abonnement individuel, `ETAB-` = pack établissement)
+ * pour ne courir aucun risque de régression sur le flux de paiement individuel.
  */
 @ApiTags(SWAGGER_TAGS.PAYMENTS)
 @Controller('api/webhooks/pawapay')
@@ -25,6 +33,8 @@ export class PawaPayWebhooksController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly providerFactory: PaymentProviderFactory,
+    @Inject(forwardRef(() => EtablissementPaymentsService))
+    private readonly etablissementPaymentsService: EtablissementPaymentsService,
   ) {}
 
   /** Ping pour vérifier que ngrok atteint bien le backend. */
@@ -95,7 +105,17 @@ export class PawaPayWebhooksController {
       `Callback dépôt → traitement ref=${ref} outcome=${outcome ?? 'via API'}`,
     );
 
-    this.paymentsService.processPaymentNotification(ref, body);
+    if (ref.startsWith(ETABLISSEMENT_REF_PREFIX)) {
+      this.etablissementPaymentsService.processPaymentNotification(ref, body);
+      return;
+    }
+
+    if (ref.startsWith(PAYMENTS_CONSTANTS.REF_PREFIX)) {
+      this.paymentsService.processPaymentNotification(ref, body);
+      return;
+    }
+
+    this.logger.warn(`Callback dépôt : préfixe de ref inconnu ref=${ref}`);
   }
 
   private configProviderLabel(): string {

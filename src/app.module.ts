@@ -10,6 +10,7 @@ import { BooksModule } from './books/books.module';
 import { LibrariesModule } from './libraries/libraries.module';
 import { ProfileModule } from './profile/profile.module';
 import { PaymentsModule } from './payments/payments.module';
+import { EtablissementsModule } from './etablissements/etablissements.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { AdminModule } from './admin/admin.module';
@@ -29,6 +30,7 @@ import { PushModule } from './push/push.module';
     LibrariesModule,
     BooksModule,
     PaymentsModule,
+    EtablissementsModule,
     ChallengesModule,
     DiscoveryModule,
     AdminModule,

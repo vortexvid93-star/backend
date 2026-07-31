@@ -159,6 +159,20 @@ export class AdminLibrariesService {
     return { statut: updated.statut };
   }
 
+  async deleteLibrary(libraryId: string) {
+    const library = await this.findBibliothequeOrThrow(libraryId);
+
+    if (library.statut !== StatutBibliotheque.ARCHIVEE) {
+      throw new BadRequestException(
+        'Seule une bibliothèque archivée peut être supprimée définitivement.',
+      );
+    }
+
+    await this.prisma.bibliotheque.delete({ where: { id: libraryId } });
+
+    return { id: libraryId };
+  }
+
   async addBooks(libraryId: string, dto: AddLibraryBooksDto) {
     const library = await this.findBibliothequeOrThrow(libraryId);
 

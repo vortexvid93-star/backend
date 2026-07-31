@@ -6,7 +6,7 @@ import { seedCatalog } from './seed-catalog';
 import { seedChallenges } from './seed-challenges';
 import { seedUserData } from './seed-user-data';
 
-/** Tarifs alignés marché Congo (valeurs stockées en XOF). */
+/** Tarifs alignés marché Congo (valeurs stockées en XAF). */
 const PLANS = [
   { plan: PlanType.HEBDOMADAIRE, prix: 1500, duree_jours: 7 },
   { plan: PlanType.MENSUEL, prix: 4900, duree_jours: 30 },
@@ -28,13 +28,13 @@ async function main() {
         plan: item.plan,
         prix: item.prix,
         duree_jours: item.duree_jours,
-        devise: 'XOF',
+        devise: 'XAF',
         statut: StatutPlan.ACTIF,
       },
       update: {
         prix: item.prix,
         duree_jours: item.duree_jours,
-        devise: 'XOF',
+        devise: 'XAF',
         statut: StatutPlan.ACTIF,
       },
     });

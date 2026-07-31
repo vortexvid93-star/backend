@@ -27,6 +27,7 @@ import {
   AdminBooksAssignCategoriesDocs,
   AdminBooksControllerDocs,
   AdminBooksCreateDocs,
+  AdminBooksDetailDocs,
   AdminBooksListDocs,
   AdminBooksUpdateDocs,
 } from './admin-books.controller.docs';
@@ -96,6 +97,13 @@ export class AdminBooksController {
   @HttpCode(HttpStatus.OK)
   listBooks(@Query() query: AdminBooksQueryDto) {
     return this.adminBooksService.listBooks(query);
+  }
+
+  @Get(':id')
+  @AdminBooksDetailDocs()
+  @HttpCode(HttpStatus.OK)
+  getBookDetail(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminBooksService.getBookDetail(id);
   }
 
   @Post()

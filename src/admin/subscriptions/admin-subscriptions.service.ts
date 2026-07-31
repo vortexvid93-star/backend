@@ -27,6 +27,9 @@ export class AdminSubscriptionsService {
       ...(query.statut ? { statut: query.statut } : {}),
       ...(query.auth_id ? { auth_id: query.auth_id } : {}),
       ...(query.plan ? { plan: { plan: query.plan } } : {}),
+      ...(query.type_renouvellement
+        ? { type_renouvellement: query.type_renouvellement }
+        : {}),
     };
 
     const [rows, total] = await Promise.all([

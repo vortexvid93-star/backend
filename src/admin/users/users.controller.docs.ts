@@ -10,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiJwtAdmin } from '../../common/swagger/decorators';
 import {
+  AdminStatsReadingHabitsSchema,
   AdminUserDetailSchema,
   PaginatedAdminUserListSchema,
 } from '../../common/swagger/schemas/admin.schema';
@@ -47,6 +48,18 @@ export const AdminUsersDetailDocs = () =>
         'Profil auth + personne, historiques abonnements/paiements et compteurs d’activité.',
     }),
     ApiOkResponse({ type: AdminUserDetailSchema }),
+    ApiNotFoundResponse({ description: 'Utilisateur introuvable.' }),
+  );
+
+export const AdminUsersReadingHabitsDocs = () =>
+  applyDecorators(
+    authIdParam(),
+    ApiOperation({
+      summary: 'Habitudes de lecture d’un utilisateur',
+      description:
+        'Heatmap, créneau préféré, durée moyenne de session et streak, filtrés sur cet utilisateur. Query `periode` : 7j | 30j | 90j | 365j (défaut 30j).',
+    }),
+    ApiOkResponse({ type: AdminStatsReadingHabitsSchema }),
     ApiNotFoundResponse({ description: 'Utilisateur introuvable.' }),
   );
 

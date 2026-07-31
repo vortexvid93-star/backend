@@ -37,10 +37,10 @@ export const AdminPlansCreateDocs = () =>
     ApiOperation({
       summary: 'Créer un plan',
       description:
-        '`plan` unique. Prix min 100 XOF. `statut=ACTIF` par défaut.',
+        '`plan` unique. Prix min 100 XAF. `statut=ACTIF` par défaut.',
     }),
     ApiCreatedResponse({ type: PlanItemSchema }),
-    ApiBadRequestResponse({ description: 'Prix < 100 XOF.' }),
+    ApiBadRequestResponse({ description: 'Prix < 100 XAF.' }),
     ApiConflictResponse({ description: 'Type plan déjà existant.' }),
   );
 

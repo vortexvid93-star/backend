@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 import { PlanType } from '../../../../generated/prisma/enums';
-import { MIN_PLAN_PRIX_XOF } from '../admin-plans.constants';
+import { MIN_PLAN_PRIX_XAF } from '../admin-plans.constants';
 
 export class CreateAdminPlanDto {
   @IsEnum(PlanType)
@@ -17,7 +17,7 @@ export class CreateAdminPlanDto {
 
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(MIN_PLAN_PRIX_XOF)
+  @Min(MIN_PLAN_PRIX_XAF)
   prix: number;
 
   @IsOptional()

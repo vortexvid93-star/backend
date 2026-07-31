@@ -54,9 +54,9 @@ export class PaymentsService {
     await this.assertCanInitPayment(authId, planId);
 
     const montant = Number(plan.prix);
-    if (montant < PAYMENTS_CONSTANTS.MIN_AMOUNT_XOF) {
+    if (montant < PAYMENTS_CONSTANTS.MIN_AMOUNT_XAF) {
       throw new BadRequestException(
-        `Montant minimum : ${PAYMENTS_CONSTANTS.MIN_AMOUNT_XOF} XOF.`,
+        `Montant minimum : ${PAYMENTS_CONSTANTS.MIN_AMOUNT_XAF} XAF.`,
       );
     }
 

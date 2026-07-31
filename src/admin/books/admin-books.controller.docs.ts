@@ -12,6 +12,7 @@ import { ApiJwtAdmin } from '../../common/swagger/decorators';
 import {
   AdminBookAuthorsResponseSchema,
   AdminBookCategoriesResponseSchema,
+  AdminBookListItemSchema,
   PaginatedAdminBookListSchema,
 } from '../../common/swagger/schemas/admin.schema';
 import {
@@ -37,6 +38,18 @@ export const AdminBooksListDocs = () =>
         'Tous statuts (PUBLIE / ARCHIVE). Ne retourne jamais `cloudinary_public_id` ni `url_externe_livre`.',
     }),
     ApiOkResponse({ type: PaginatedAdminBookListSchema }),
+  );
+
+export const AdminBooksDetailDocs = () =>
+  applyDecorators(
+    livreIdParam(),
+    ApiOperation({
+      summary: "Détail d'un livre",
+      description:
+        'Même forme qu’un élément de la liste admin (auteurs, catégories, statistique incluses).',
+    }),
+    ApiOkResponse({ type: AdminBookListItemSchema }),
+    ApiNotFoundResponse({ description: 'Livre introuvable.' }),
   );
 
 export const AdminBooksCreateDocs = () =>

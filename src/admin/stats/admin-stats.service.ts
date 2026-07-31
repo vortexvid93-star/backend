@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { TtlCache } from '../../common/cache/ttl-cache.util';
 import {
   AuthProvider,
   AuthRole,
   AuthStatut,
   StatutAbonnement,
+  StatutEtablissement,
   StatutLivre,
   StatutPaiement,
+  TypeLivre,
 } from '../../../generated/prisma/enums';
 import type { Prisma } from '../../../generated/prisma/client';
 import { buildPaginationMeta } from '../../common/pagination.util';
@@ -18,6 +21,8 @@ import {
 import type { AdminStatsBooksQueryDto } from './dto/admin-stats-books-query.dto';
 import type { AdminStatsSearchTermsQueryDto } from './dto/admin-stats-search-terms-query.dto';
 import type { AdminStatsUsersQueryDto } from './dto/admin-stats-users-query.dto';
+import type { AdminStatsReadingHabitsQueryDto } from './dto/admin-stats-reading-habits-query.dto';
+import { computeReadingHabits } from './admin-reading-habits.util';
 import {
   AdminActivityType,
   type AdminStatsActivityQueryDto,
@@ -31,11 +36,70 @@ function activeAbonnementsWhere(at: Date) {
   };
 }
 
+const DASHBOARD_CACHE_TTL_MS = 90_000;
+
+export interface DashboardStats {
+  nb_utilisateurs_actifs: number;
+  nb_abonnements_actifs: number;
+  revenue_mois_courant: number;
+  nb_livres_publies: number;
+  nb_lectures_7j: number;
+  nb_inscriptions_7j: number;
+  nb_paiements_succes_7j: number;
+  top_5_livres: {
+    titre: string;
+    type_livre: TypeLivre;
+    nb_lectures: number;
+    note_moyenne: number | null;
+  }[];
+}
+
 @Injectable()
 export class AdminStatsService {
+  private readonly dashboardCache = new TtlCache<DashboardStats>();
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDashboard() {
+  /**
+   * Union abonnement individuel actif ∪ membre établissement actif, dédupliquée
+   * par auth_id — un utilisateur avec les deux ne compte qu'une fois.
+   */
+  private async countAbonnesActifsTotal(at: Date): Promise<number> {
+    const [abonnementRows, etablissementRows] = await Promise.all([
+      this.prisma.abonnement.findMany({
+        where: activeAbonnementsWhere(at),
+        select: { auth_id: true },
+        distinct: ['auth_id'],
+      }),
+      this.prisma.etablissementMembre.findMany({
+        where: {
+          retire_le: null,
+          etablissement: {
+            statut: StatutEtablissement.ACTIF,
+            date_fin: { gt: at },
+          },
+        },
+        select: { auth_id: true },
+        distinct: ['auth_id'],
+      }),
+    ]);
+
+    const authIds = new Set<string>();
+    for (const row of abonnementRows) authIds.add(row.auth_id);
+    for (const row of etablissementRows) authIds.add(row.auth_id);
+    return authIds.size;
+  }
+
+  async getDashboard(): Promise<DashboardStats> {
+    const cached = this.dashboardCache.get();
+    if (cached) return cached;
+
+    const stats = await this.computeDashboard();
+    this.dashboardCache.set(stats, DASHBOARD_CACHE_TTL_MS);
+    return stats;
+  }
+
+  private async computeDashboard(): Promise<DashboardStats> {
     const now = new Date();
     const septJours = dateDepuisJours(7, now);
     const debutMois = debutMoisCourant(now);
@@ -44,17 +108,27 @@ export class AdminStatsService {
       nb_utilisateurs_actifs,
       nb_abonnements_actifs,
       revenueAgg,
+      revenueEtabAgg,
       nb_livres_publies,
       lectures7jAgg,
       nb_inscriptions_7j,
       nb_paiements_succes_7j,
+      nb_paiements_succes_7j_etab,
       topStats,
     ] = await Promise.all([
       this.prisma.auth.count({ where: { statut: AuthStatut.ACTIF } }),
-      this.prisma.abonnement.count({
-        where: activeAbonnementsWhere(now),
-      }),
+      this.countAbonnesActifsTotal(now),
       this.prisma.paiement.aggregate({
+        where: {
+          statut: StatutPaiement.SUCCES,
+          createdAt: { gte: debutMois },
+        },
+        _sum: { montant: true },
+      }),
+      // Le revenu mensuel doit inclure les packs établissement, pas
+      // uniquement les abonnements individuels — sinon les paiements
+      // établissement réussis n'apparaissent nulle part dans les KPI.
+      this.prisma.paiementEtablissement.aggregate({
         where: {
           statut: StatutPaiement.SUCCES,
           createdAt: { gte: debutMois },
@@ -74,6 +148,12 @@ export class AdminStatsService {
           createdAt: { gte: septJours },
         },
       }),
+      this.prisma.paiementEtablissement.count({
+        where: {
+          statut: StatutPaiement.SUCCES,
+          createdAt: { gte: septJours },
+        },
+      }),
       this.prisma.statistiqueLivre.findMany({
         include: {
           livre: {
@@ -88,11 +168,13 @@ export class AdminStatsService {
     return {
       nb_utilisateurs_actifs,
       nb_abonnements_actifs,
-      revenue_mois_courant: Number(revenueAgg._sum.montant ?? 0),
+      revenue_mois_courant:
+        Number(revenueAgg._sum.montant ?? 0) +
+        Number(revenueEtabAgg._sum.montant ?? 0),
       nb_livres_publies,
       nb_lectures_7j: lectures7jAgg._sum.nb_lectures_7j ?? 0,
       nb_inscriptions_7j,
-      nb_paiements_succes_7j,
+      nb_paiements_succes_7j: nb_paiements_succes_7j + nb_paiements_succes_7j_etab,
       top_5_livres: topStats.map((row) => ({
         titre: row.livre.titre,
         type_livre: row.livre.type_livre,
@@ -190,13 +272,7 @@ export class AdminStatsService {
         ? 0
         : Math.round((actifsSurPeriode / totalPeriode) * 10000) / 100;
 
-    const abonnesActifs = await this.prisma.abonnement.findMany({
-      where: activeAbonnementsWhere(now),
-      select: { auth_id: true },
-      distinct: ['auth_id'],
-    });
-
-    const nb_abonnes_actifs = abonnesActifs.length;
+    const nb_abonnes_actifs = await this.countAbonnesActifsTotal(now);
 
     return {
       inscriptions_par_jour,
@@ -275,6 +351,36 @@ export class AdminStatsService {
     return { data, top_sans_resultats };
   }
 
+  async getReadingHabits(query: AdminStatsReadingHabitsQueryDto) {
+    const jours = parsePeriodeJours(query.periode, '30j');
+    const since = dateDepuisJours(jours);
+    const sincePrecedente = dateDepuisJours(jours * 2);
+
+    const [sessions, sessionsPrecedentes, streaksAgg] = await Promise.all([
+      this.prisma.sessionLecture.findMany({
+        where: { createdAt: { gte: since } },
+        select: { createdAt: true, duree_min: true },
+      }),
+      this.prisma.sessionLecture.findMany({
+        where: { createdAt: { gte: sincePrecedente, lt: since } },
+        select: { duree_min: true },
+      }),
+      this.prisma.personne.aggregate({
+        _avg: { streak_actuel: true, streak_max: true },
+        _max: { streak_max: true },
+      }),
+    ]);
+
+    const habitudes = computeReadingHabits(sessions, sessionsPrecedentes);
+
+    return {
+      ...habitudes,
+      streak_moyen: Math.round((streaksAgg._avg.streak_actuel ?? 0) * 100) / 100,
+      streak_max_moyen: Math.round((streaksAgg._avg.streak_max ?? 0) * 100) / 100,
+      streak_max_record: streaksAgg._max.streak_max ?? 0,
+    };
+  }
+
   async getActivity(query: AdminStatsActivityQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
@@ -350,6 +456,7 @@ export class AdminStatsService {
               date: row.createdAt,
               payload: {
                 id: row.id,
+                source: 'individuel' as const,
                 auth_id: row.auth.id,
                 email: row.auth.email,
                 nom: row.auth.personne.nom,
@@ -359,6 +466,36 @@ export class AdminStatsService {
                 statut: row.statut,
                 operateur: row.operateur,
                 plan: row.plan.plan,
+              },
+            })),
+          ),
+      );
+      // Les paiements de pack établissement sont aussi une activité de
+      // paiement à part entière — sans ça, ils sont invisibles du flux
+      // d'activité admin alors qu'ils apparaissent bien dans les listes et
+      // le tableau de bord.
+      fetches.push(
+        this.prisma.paiementEtablissement
+          .findMany({
+            where: { createdAt: { gte: since } },
+            orderBy: { createdAt: 'desc' },
+            take: fetchSize,
+            include: { offre: { select: { nom: true } } },
+          })
+          .then((rows) =>
+            rows.map((row) => ({
+              type: AdminActivityType.PAIEMENT as const,
+              date: row.createdAt,
+              payload: {
+                id: row.id,
+                source: 'etablissement' as const,
+                nom_etablissement: row.nom_etablissement,
+                email_contact: row.email_contact,
+                montant: Number(row.montant),
+                devise: row.devise,
+                statut: row.statut,
+                operateur: row.operateur,
+                plan: `Pack établissement · ${row.offre.nom}`,
               },
             })),
           ),
@@ -385,9 +522,14 @@ export class AdminStatsService {
     }
     if (includePaiements) {
       countPromises.push(
-        this.prisma.paiement.count({
-          where: { createdAt: { gte: since } },
-        }),
+        Promise.all([
+          this.prisma.paiement.count({
+            where: { createdAt: { gte: since } },
+          }),
+          this.prisma.paiementEtablissement.count({
+            where: { createdAt: { gte: since } },
+          }),
+        ]).then(([individuel, etablissement]) => individuel + etablissement),
       );
     }
 

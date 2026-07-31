@@ -12,6 +12,7 @@ type AuthWithPersonne = Auth & { personne: Personne };
 export function mapAdminUserListItem(
   auth: AuthWithPersonne,
   abonnement: (Abonnement & { plan: PlanAbonnement }) | null,
+  membreEtablissement = false,
 ) {
   return {
     id: auth.id,
@@ -28,6 +29,7 @@ export function mapAdminUserListItem(
       points: auth.personne.points,
     },
     abonnement_actif: abonnement ? mapAbonnementActif(abonnement) : null,
+    membre_etablissement: membreEtablissement,
   };
 }
 

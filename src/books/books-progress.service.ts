@@ -122,6 +122,14 @@ export class BooksProgressService {
         }
 
         if (dto.duree_lecture_min !== undefined && dto.duree_lecture_min > 0) {
+          await tx.sessionLecture.create({
+            data: {
+              auth_id: authId,
+              livre_id: livreId,
+              duree_min: dto.duree_lecture_min,
+            },
+          });
+
           pendingPushes.push(
             ...(await this.challengesEngine.onReadingDurationAdded(
               tx,

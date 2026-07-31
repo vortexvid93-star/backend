@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiJwtAdmin } from '../../common/swagger/decorators';
 import {
   AdminStatsDashboardSchema,
+  AdminStatsReadingHabitsSchema,
   AdminStatsSearchTermsSchema,
   AdminStatsUsersSchema,
   PaginatedAdminStatsActivitySchema,
@@ -59,4 +60,14 @@ export const AdminStatsActivityDocs = () =>
         'Fil chronologique des nouvelles inscriptions utilisateurs et des paiements. `periode` : 7j | 30j | 90j (défaut 7j). `type` : INSCRIPTION | PAIEMENT.',
     }),
     ApiOkResponse({ type: PaginatedAdminStatsActivitySchema }),
+  );
+
+export const AdminStatsReadingHabitsDocs = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Habitudes de lecture (global)',
+      description:
+        'Heatmap heure × jour de semaine, créneau préféré, durée moyenne de session et tendance, calculés depuis `SessionLecture`. Query `periode` : 7j | 30j | 90j | 365j (défaut 30j).',
+    }),
+    ApiOkResponse({ type: AdminStatsReadingHabitsSchema }),
   );

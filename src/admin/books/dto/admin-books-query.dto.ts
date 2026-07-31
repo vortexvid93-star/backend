@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -19,6 +20,10 @@ export class AdminBooksQueryDto {
   @IsOptional()
   @IsEnum(TypeLivre)
   type_livre?: TypeLivre;
+
+  @IsOptional()
+  @IsUUID()
+  categorie_id?: string;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {

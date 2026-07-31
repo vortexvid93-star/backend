@@ -1,6 +1,10 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
-import { PlanType, StatutAbonnement } from '../../../../generated/prisma/enums';
+import {
+  PlanType,
+  StatutAbonnement,
+  TypeRenouvellement,
+} from '../../../../generated/prisma/enums';
 
 export class AdminSubscriptionsQueryDto {
   @IsOptional()
@@ -10,6 +14,10 @@ export class AdminSubscriptionsQueryDto {
   @IsOptional()
   @IsEnum(PlanType)
   plan?: PlanType;
+
+  @IsOptional()
+  @IsEnum(TypeRenouvellement)
+  type_renouvellement?: TypeRenouvellement;
 
   @IsOptional()
   @IsUUID()

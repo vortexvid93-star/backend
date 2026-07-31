@@ -1,0 +1,219 @@
+{
+  "info": {
+    "_postman_id": "bibliotech-etablissements-v1",
+    "name": "BiblioTech — Établissements (packs collectifs)",
+    "description": "Packs d'abonnement collectif pour écoles : catalogue d'offres, paiement PawaPay sans compte, rattachement self-service par code d'invitation, et CRUD admin (création manuelle, rattachement/retrait de membres).\n\n**Prérequis**\n1. `npm run start:dev`\n2. Compte **ADMIN** (`role=ADMIN`, `statut=ACTIF`) pour la section 1\n3. Un JWT utilisateur standard (obtenu via la collection Auth) pour tester `POST /etablissements/join` — variable `user_access_token`\n4. Pour tester le paiement de bout en bout, `PAYMENT_PROVIDER=mock` en local (le provider mock accepte tout dépôt sans appel externe)\n\n**Ordre recommandé** : `0.1 Login admin` → `1.2 Créer un pack` (récupère `etablissement_id`/`code_invitation`) → `1.3 Rattacher un membre` (×2, puis un 3ᵉ pour vérifier le refus si `nb_users_max=2`) → `1.5 Retirer un membre` (vérifie qu'une place se libère) → `2.4 Join (self-service)` avec un `user_access_token` et le `code_invitation` récupéré.\n\n**Schéma** : `etablissement.nb_users_max` plafonne les membres actifs (`etablissement_membre.retire_le IS NULL`) ; le join applique un verrou `SELECT ... FOR UPDATE` pour éviter le dépassement en cas de rattachements concurrents.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "admin_email", "value": "password@biblio.tech" },
+    { "key": "admin_password", "value": "MonMotDePasse123" },
+    { "key": "access_token", "value": "" },
+    { "key": "user_access_token", "value": "" },
+    { "key": "etablissement_id", "value": "" },
+    { "key": "code_invitation", "value": "" },
+    { "key": "offre_id", "value": "" },
+    { "key": "membre_id", "value": "" },
+    { "key": "ref_transaction", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 — Prérequis (JWT ADMIN)",
+      "item": [
+        {
+          "name": "0.1 Login admin → access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "  pm.collectionVariables.set('access_token', json.access_token.trim());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/password/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Admin — Établissements",
+      "item": [
+        {
+          "name": "1.1 Liste des packs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/etablissements?page=1&limit=20" }
+        },
+        {
+          "name": "1.2 Créer un pack (2 places, test race condition)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('etablissement_id', json.id);",
+                  "if (json.code_invitation) pm.collectionVariables.set('code_invitation', json.code_invitation);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Lycée Test Postman\",\n  \"email_contact\": \"contact@lycee-test.cg\",\n  \"nb_users_max\": 2,\n  \"prix\": 50000,\n  \"devise\": \"XAF\",\n  \"duree_jours\": 365\n}"
+            },
+            "url": "{{baseUrl}}/admin/etablissements"
+          }
+        },
+        {
+          "name": "1.3 Détail du pack (membres actifs)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/etablissements/{{etablissement_id}}" }
+        },
+        {
+          "name": "1.4 Rattacher un membre (fournir auth_id d'un compte USER existant)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auth_id\": \"REMPLACER_PAR_UN_AUTH_ID_VALIDE\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/etablissements/{{etablissement_id}}/membres"
+          }
+        },
+        {
+          "name": "1.5 Rattacher un 3e membre au-delà de nb_users_max=2 (doit échouer 409)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auth_id\": \"REMPLACER_PAR_UN_3E_AUTH_ID\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/etablissements/{{etablissement_id}}/membres"
+          }
+        },
+        {
+          "name": "1.6 Retirer un membre (libère une place — récupérer membre_id via 1.3)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/etablissements/{{etablissement_id}}/membres/{{membre_id}}/retirer"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Établissements (public / self-service)",
+      "item": [
+        {
+          "name": "2.1 Catalogue des offres (public, sans auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (Array.isArray(json) && json[0]) pm.collectionVariables.set('offre_id', json[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": { "method": "GET", "url": "{{baseUrl}}/etablissements/offres", "auth": { "type": "noauth" } }
+        },
+        {
+          "name": "2.2 Payer un pack (sans compte — nécessite PAYMENT_PROVIDER=mock ou pawapay sandbox)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.ref_transaction) pm.collectionVariables.set('ref_transaction', json.ref_transaction);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offre_id\": \"{{offre_id}}\",\n  \"nom_etablissement\": \"École Postman\",\n  \"email_contact\": \"contact@ecole-postman.cg\",\n  \"phonenumber\": \"060000000\",\n  \"operator\": \"MTN_MOMO_COG\",\n  \"country\": \"CG\"\n}"
+            },
+            "url": "{{baseUrl}}/etablissements/payer"
+          }
+        },
+        {
+          "name": "2.3 Statut du paiement (polling)",
+          "request": {
+            "method": "GET",
+            "auth": { "type": "noauth" },
+            "url": "{{baseUrl}}/etablissements/paiements/{{ref_transaction}}/statut"
+          }
+        },
+        {
+          "name": "2.4 Simuler le webhook PawaPay (ACCEPTED) — crée l'établissement",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"depositId\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"COMPLETED\",\n  \"clientReferenceId\": \"{{ref_transaction}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/webhooks/pawapay/deposits"
+          }
+        },
+        {
+          "name": "2.5 Rejoindre un pack via code d'invitation (JWT utilisateur requis)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{code_invitation}}\"\n}"
+            },
+            "url": "{{baseUrl}}/etablissements/join"
+          }
+        },
+        {
+          "name": "2.6 Rejoindre avec un code invalide (doit échouer 404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{user_access_token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"BLNK-0000\"\n}"
+            },
+            "url": "{{baseUrl}}/etablissements/join"
+          }
+        }
+      ]
+    }
+  ]
+}

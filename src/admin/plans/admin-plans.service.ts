@@ -7,7 +7,7 @@ import {
 import { Prisma } from '../../../generated/prisma/client';
 import { StatutPlan } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MIN_PLAN_PRIX_XOF } from './admin-plans.constants';
+import { MIN_PLAN_PRIX_XAF } from './admin-plans.constants';
 import { mapAdminPlanListItem } from './admin-plans.mapper';
 import type { CreateAdminPlanDto } from './dto/create-admin-plan.dto';
 import type { UpdateAdminPlanDto } from './dto/update-admin-plan.dto';
@@ -32,7 +32,7 @@ export class AdminPlansService {
         data: {
           plan: dto.plan,
           prix: dto.prix,
-          devise: dto.devise?.trim() || 'XOF',
+          devise: dto.devise?.trim() || 'XAF',
           duree_jours: dto.duree_jours,
           statut: StatutPlan.ACTIF,
         },
@@ -88,9 +88,9 @@ export class AdminPlansService {
   }
 
   private assertMinPrix(prix: number) {
-    if (prix < MIN_PLAN_PRIX_XOF) {
+    if (prix < MIN_PLAN_PRIX_XAF) {
       throw new BadRequestException(
-        `Le prix minimum est de ${MIN_PLAN_PRIX_XOF} XOF.`,
+        `Le prix minimum est de ${MIN_PLAN_PRIX_XAF} XAF.`,
       );
     }
   }

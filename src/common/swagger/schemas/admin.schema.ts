@@ -65,6 +65,10 @@ export class AdminUserListItemSchema {
   personne: AdminUserListPersonneSchema;
   @ApiPropertyOptional({ type: AbonnementActifSchema, nullable: true })
   abonnement_actif: AbonnementActifSchema | null;
+  @ApiProperty({
+    description: 'Vrai si membre actif d’un pack établissement (indépendant de abonnement_actif).',
+  })
+  membre_etablissement: boolean;
 }
 
 export class PaginatedAdminUserListSchema {
@@ -278,6 +282,28 @@ export class AdminStatsSearchTermsSchema {
   data: AdminStatsSearchTermItemSchema[];
   @ApiProperty({ type: [AdminStatsSearchTermSansResultatSchema] })
   top_sans_resultats: AdminStatsSearchTermSansResultatSchema[];
+}
+
+export class AdminStatsReadingHabitsHeatmapCellSchema {
+  @ApiProperty() jour_semaine: number;
+  @ApiProperty() heure: number;
+  @ApiProperty() nb_sessions: number;
+  @ApiProperty() minutes_total: number;
+}
+
+export class AdminStatsReadingHabitsSchema {
+  @ApiProperty({ type: [AdminStatsReadingHabitsHeatmapCellSchema] })
+  heatmap: AdminStatsReadingHabitsHeatmapCellSchema[];
+  @ApiPropertyOptional({ enum: ['MATIN', 'APRES_MIDI', 'SOIR', 'NUIT'] })
+  creneau_prefere: 'MATIN' | 'APRES_MIDI' | 'SOIR' | 'NUIT' | null;
+  @ApiProperty() duree_moyenne_session_min: number;
+  @ApiProperty() nb_sessions: number;
+  @ApiPropertyOptional() tendance_duree_pct: number | null;
+  @ApiPropertyOptional() streak_moyen?: number;
+  @ApiPropertyOptional() streak_max_moyen?: number;
+  @ApiPropertyOptional() streak_max_record?: number;
+  @ApiPropertyOptional() streak_actuel?: number;
+  @ApiPropertyOptional() streak_max?: number;
 }
 
 export class AdminAuteurListItemSchema {

@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EtablissementsModule } from '../etablissements/etablissements.module';
 import { PlansController } from './plans.controller';
 import { PlansService } from './plans.service';
 import { PaymentsController } from './payments.controller';
@@ -14,7 +15,7 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { SubscriptionsService } from './subscriptions.service';
 
 @Module({
-  imports: [AuthModule, PrismaModule],
+  imports: [AuthModule, PrismaModule, forwardRef(() => EtablissementsModule)],
   controllers: [
     PlansController,
     PaymentsController,
@@ -30,6 +31,6 @@ import { SubscriptionsService } from './subscriptions.service';
     PawaPayBootstrapService,
     PaymentProviderFactory,
   ],
-  exports: [PaymentsService, SubscriptionsService],
+  exports: [PaymentsService, SubscriptionsService, PaymentProviderFactory],
 })
 export class PaymentsModule {}

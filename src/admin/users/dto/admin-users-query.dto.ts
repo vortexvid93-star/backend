@@ -1,5 +1,6 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -20,6 +21,16 @@ export class AdminUsersQueryDto {
   @IsOptional()
   @IsEnum(AuthRole)
   role?: AuthRole;
+
+  /** Abonnement individuel actif OU membre établissement actif. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value as boolean | undefined;
+  })
+  @IsBoolean()
+  abonnement_actif?: boolean;
 
   /** Recherche insensible à la casse sur email, nom ou prénom. */
   @IsOptional()

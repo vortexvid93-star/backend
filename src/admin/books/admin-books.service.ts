@@ -40,6 +40,9 @@ export class AdminBooksService {
       ...(query.is_downloadable !== undefined
         ? { is_downloadable: query.is_downloadable }
         : {}),
+      ...(query.categorie_id
+        ? { appartenir: { some: { categorie_id: query.categorie_id } } }
+        : {}),
       ...(q ? { titre: { contains: q, mode: 'insensitive' } } : {}),
     };
 
@@ -58,6 +61,17 @@ export class AdminBooksService {
       data: rows.map(mapAdminBookListItem),
       meta: buildPaginationMeta(page, limit, total),
     };
+  }
+
+  async getBookDetail(livreId: string) {
+    const livre = await this.prisma.livre.findUnique({
+      where: { id: livreId },
+      include: BOOK_LIST_INCLUDE,
+    });
+    if (!livre) {
+      throw new NotFoundException('Livre introuvable.');
+    }
+    return mapAdminBookListItem(livre);
   }
 
   async createBook(

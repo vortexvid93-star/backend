@@ -14,6 +14,7 @@ import {
   AddedCountSchema,
   AdminLibraryCreateSchema,
   ArchiveStatutSchema,
+  IdOnlySchema,
   IdUpdatedAtSchema,
 } from '../../common/swagger/schemas/shared.schema';
 
@@ -97,6 +98,21 @@ export const AdminLibrariesUnarchiveDocs = () =>
         'Passe `statut` à ACTIVE (visible dans le catalogue utilisateur).',
     }),
     ApiOkResponse({ type: ArchiveStatutSchema }),
+    ApiNotFoundResponse(),
+  );
+
+export const AdminLibrariesDeleteDocs = () =>
+  applyDecorators(
+    libraryIdParam(),
+    ApiOperation({
+      summary: 'Supprimer définitivement une bibliothèque',
+      description:
+        'Réservé aux bibliothèques ARCHIVEE (RG). Supprime uniquement les liaisons livre↔bibliothèque (`onDelete: Cascade` sur `appartient`) — les livres eux-mêmes ne sont jamais supprimés.',
+    }),
+    ApiOkResponse({ type: IdOnlySchema }),
+    ApiBadRequestResponse({
+      description: 'La bibliothèque n’est pas archivée.',
+    }),
     ApiNotFoundResponse(),
   );
 

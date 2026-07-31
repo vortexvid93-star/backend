@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { ChallengesModule } from '../challenges/challenges.module';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { AdminAuteursController } from './auteurs/admin-auteurs.controller';
 import { AdminAuteursService } from './auteurs/admin-auteurs.service';
@@ -27,9 +28,15 @@ import { AdminPaymentsController } from './payments/admin-payments.controller';
 import { AdminPaymentsService } from './payments/admin-payments.service';
 import { AdminStatsController } from './stats/admin-stats.controller';
 import { AdminStatsService } from './stats/admin-stats.service';
+import { AdminEtablissementsController } from './etablissements/admin-etablissements.controller';
+import { AdminEtablissementsService } from './etablissements/admin-etablissements.service';
+import { AdminExportController } from './exports/admin-export.controller';
+import { AdminExportService } from './exports/admin-export.service';
+import { AdminPerformanceController } from './performance/admin-performance.controller';
+import { AdminPerformanceService } from './performance/admin-performance.service';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, ChallengesModule],
   controllers: [
     AdminUsersController,
     AdminBooksController,
@@ -44,6 +51,9 @@ import { AdminStatsService } from './stats/admin-stats.service';
     AdminNotificationsController,
     AdminPaymentsController,
     AdminStatsController,
+    AdminEtablissementsController,
+    AdminExportController,
+    AdminPerformanceController,
   ],
   providers: [
     AdminUsersService,
@@ -59,6 +69,9 @@ import { AdminStatsService } from './stats/admin-stats.service';
     AdminNotificationsService,
     AdminPaymentsService,
     AdminStatsService,
+    AdminEtablissementsService,
+    AdminExportService,
+    AdminPerformanceService,
     AdminRoleGuard,
   ],
 })

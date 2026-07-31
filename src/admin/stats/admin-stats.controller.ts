@@ -15,12 +15,14 @@ import {
   AdminStatsControllerDocs,
   AdminStatsDashboardDocs,
   AdminStatsActivityDocs,
+  AdminStatsReadingHabitsDocs,
   AdminStatsSearchTermsDocs,
   AdminStatsUsersDocs,
 } from './admin-stats.controller.docs';
 import { AdminStatsService } from './admin-stats.service';
 import { AdminStatsActivityQueryDto } from './dto/admin-stats-activity-query.dto';
 import { AdminStatsBooksQueryDto } from './dto/admin-stats-books-query.dto';
+import { AdminStatsReadingHabitsQueryDto } from './dto/admin-stats-reading-habits-query.dto';
 import { AdminStatsSearchTermsQueryDto } from './dto/admin-stats-search-terms-query.dto';
 import { AdminStatsUsersQueryDto } from './dto/admin-stats-users-query.dto';
 
@@ -64,5 +66,12 @@ export class AdminStatsController {
   @HttpCode(HttpStatus.OK)
   getActivity(@Query() query: AdminStatsActivityQueryDto) {
     return this.adminStatsService.getActivity(query);
+  }
+
+  @Get('reading-habits')
+  @AdminStatsReadingHabitsDocs()
+  @HttpCode(HttpStatus.OK)
+  getReadingHabits(@Query() query: AdminStatsReadingHabitsQueryDto) {
+    return this.adminStatsService.getReadingHabits(query);
   }
 }

@@ -8,17 +8,37 @@ import { ConfigService } from '@nestjs/config';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateChaineDto } from './dto/create-chaine.dto';
+import type { UpdateChaineDto } from './dto/update-chaine.dto';
 import type { VideosQueryDto } from './dto/videos-query.dto';
 
 const YT_API = 'https://www.googleapis.com/youtube/v3';
 
 interface YtChannelItem {
-  contentDetails: { relatedPlaylists: { uploads: string } };
+  id?: string;
+  contentDetails?: { relatedPlaylists: { uploads: string } };
+  statistics?: { subscriberCount?: string; hiddenSubscriberCount?: boolean };
   snippet: {
     title: string;
     description: string;
-    thumbnails: { default: { url: string } };
+    thumbnails: { default?: { url: string }; medium?: { url: string } };
   };
+}
+
+interface YtSearchItem {
+  id: { channelId: string };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: { default?: { url: string }; medium?: { url: string } };
+  };
+}
+
+export interface ResolvedChannel {
+  channel_id: string;
+  nom: string;
+  description: string;
+  thumbnail_url: string | null;
+  subscriber_count: number | null;
 }
 
 interface YtPlaylistItem {
@@ -66,6 +86,45 @@ export class YoutubeService {
     return key;
   }
 
+  // ─── Suivi du quota gratuit YouTube Data API (10 000 unités / jour) ────────
+  // Compteur en mémoire (remis à zéro au changement de jour UTC et au
+  // redémarrage) : suffisant pour repérer une dérive, la sync étant de toute
+  // façon bornée par design (cf. fetchLatestPlaylistItems).
+
+  private quotaDay = '';
+  private quotaUnitsUsed = 0;
+  private searchCallsToday = 0;
+  private static readonly DAILY_QUOTA_BUDGET = 10_000;
+  private static readonly SEARCH_UNIT_COST = 100;
+  /** Plafond absolu de vidéos conservées par chaîne, même en cas de
+   * surcharge admin (`max_videos`) — protège le quota. */
+  static readonly MAX_VIDEOS_HARD_CAP = 60;
+  /** Plafond prudent d'appels search.list/jour (coûteux, déclenchés par un
+   * admin) — laisse toujours de la marge pour les syncs automatiques. */
+  private static readonly MAX_SEARCH_CALLS_PER_DAY = 30;
+
+  private resetQuotaIfNewDay(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.quotaDay !== today) {
+      this.quotaDay = today;
+      this.quotaUnitsUsed = 0;
+      this.searchCallsToday = 0;
+    }
+  }
+
+  private trackQuota(units: number, label: string): void {
+    this.resetQuotaIfNewDay();
+    this.quotaUnitsUsed += units;
+    const pct = Math.round(
+      (this.quotaUnitsUsed / YoutubeService.DAILY_QUOTA_BUDGET) * 100,
+    );
+    if (this.quotaUnitsUsed >= YoutubeService.DAILY_QUOTA_BUDGET * 0.8) {
+      this.logger.warn(
+        `Quota YouTube API : ${this.quotaUnitsUsed}/${YoutubeService.DAILY_QUOTA_BUDGET} unités utilisées aujourd'hui (${pct}%) — dernier appel: ${label}`,
+      );
+    }
+  }
+
   // ─── YouTube Data API helpers ──────────────────────────────────────────────
 
   /** Retourne l'ID de la playlist "uploads" d'une chaîne (1 quota unit). */
@@ -75,6 +134,7 @@ export class YoutubeService {
     url.searchParams.set('id', channelId);
     url.searchParams.set('key', this.apiKey);
 
+    this.trackQuota(1, 'channels.list (uploads playlist)');
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`YouTube channels.list échoué: ${res.status}`);
 
@@ -89,14 +149,19 @@ export class YoutubeService {
   }
 
   /**
-   * Récupère les items d'une playlist depuis YouTube, en s'arrêtant dès qu'on
-   * atteint une vidéo publiée avant `publishedAfter` (optimisation quota).
-   * 1 quota unit par page de 50 résultats.
+   * Récupère les `limit` vidéos les plus récentes d'une playlist — la playlist
+   * "uploads" de YouTube est déjà triée newest-first. 1 quota unit par page de
+   * 50 (donc 1 unité jusqu'à 50 vidéos, 2 unités au-delà, plafonné à
+   * `MAX_VIDEOS_HARD_CAP`).
    */
-  async fetchPlaylistItems(
+  async fetchLatestPlaylistItems(
     playlistId: string,
-    publishedAfter?: Date,
+    limit: number,
   ): Promise<YtPlaylistItem['snippet'][]> {
+    const target = Math.min(
+      Math.max(limit, 1),
+      YoutubeService.MAX_VIDEOS_HARD_CAP,
+    );
     const items: YtPlaylistItem['snippet'][] = [];
     let pageToken: string | undefined;
 
@@ -104,10 +169,14 @@ export class YoutubeService {
       const url = new URL(`${YT_API}/playlistItems`);
       url.searchParams.set('part', 'snippet');
       url.searchParams.set('playlistId', playlistId);
-      url.searchParams.set('maxResults', '50');
+      url.searchParams.set(
+        'maxResults',
+        String(Math.min(target - items.length, 50)),
+      );
       url.searchParams.set('key', this.apiKey);
       if (pageToken) url.searchParams.set('pageToken', pageToken);
 
+      this.trackQuota(1, 'playlistItems.list');
       const res = await fetch(url.toString());
       if (!res.ok)
         throw new Error(`YouTube playlistItems.list échoué: ${res.status}`);
@@ -116,19 +185,9 @@ export class YoutubeService {
         items?: YtPlaylistItem[];
         nextPageToken?: string;
       };
-
-      let stop = false;
-      for (const item of json.items ?? []) {
-        const pubAt = new Date(item.snippet.publishedAt);
-        if (publishedAfter && pubAt <= publishedAfter) {
-          stop = true;
-          break;
-        }
-        items.push(item.snippet);
-      }
-
-      pageToken = stop ? undefined : json.nextPageToken;
-    } while (pageToken);
+      items.push(...(json.items ?? []).map((item) => item.snippet));
+      pageToken = json.nextPageToken;
+    } while (pageToken && items.length < target);
 
     return items;
   }
@@ -150,6 +209,7 @@ export class YoutubeService {
       url.searchParams.set('id', batch.join(','));
       url.searchParams.set('key', this.apiKey);
 
+      this.trackQuota(1, 'videos.list');
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(`YouTube videos.list échoué: ${res.status}`);
 
@@ -167,10 +227,16 @@ export class YoutubeService {
 
   // ─── Synchronisation ────────────────────────────────────────────────────────
 
-  private get maxVideoAgeMonths(): number {
-    return this.config.get<number>('YOUTUBE_MAX_VIDEO_AGE_MONTHS') ?? 18;
+  /** Nombre de vidéos les plus récentes conservées par chaîne (défaut 20). */
+  private get maxVideosPerChannel(): number {
+    return this.config.get<number>('YOUTUBE_MAX_VIDEOS_PER_CHANNEL') ?? 20;
   }
 
+  /**
+   * Ne garde que les `maxVideosPerChannel` vidéos les plus récentes d'une
+   * chaîne : coût quota fixe par chaîne (~3 unités), quelle que soit sa
+   * taille — au lieu de croître avec tout l'historique importé.
+   */
   async syncChannel(
     chaineId: string,
   ): Promise<{ upserted: number; skipped: number; archived: number }> {
@@ -180,15 +246,15 @@ export class YoutubeService {
     if (!chaine || !chaine.actif)
       return { upserted: 0, skipped: 0, archived: 0 };
 
-    // Première sync : limiter à maxVideoAgeMonths pour éviter l'import de tout l'historique
-    const cutoffDate = new Date();
-    cutoffDate.setMonth(cutoffDate.getMonth() - this.maxVideoAgeMonths);
-    const publishedAfter = chaine.last_synced_at ?? cutoffDate;
-
     const uploadsId = await this.getUploadsPlaylistId(chaine.channel_id);
-    const snippets = await this.fetchPlaylistItems(uploadsId, publishedAfter);
+    const snippets = await this.fetchLatestPlaylistItems(
+      uploadsId,
+      chaine.max_videos ?? this.maxVideosPerChannel,
+    );
 
     if (snippets.length === 0) {
+      // Réponse vide inhabituelle (chaîne sans vidéo ou aléa API) : on ne
+      // désactive rien pour éviter de vider la chaîne sur un faux positif.
       await this.prisma.chaineYoutube.update({
         where: { id: chaineId },
         data: { last_synced_at: new Date() },
@@ -233,18 +299,19 @@ export class YoutubeService {
           titre: snippet.title.slice(0, 500),
           thumbnail_url: thumbnail,
           view_count: BigInt(details.viewCount),
+          actif: true,
           updatedAt: new Date(),
         },
       });
       upserted++;
     }
 
-    // Archiver les vidéos trop anciennes (désactiver sans supprimer)
+    // Hors du top N les plus récentes : désactiver (sans supprimer).
     const { count: archived } = await this.prisma.videoEducative.updateMany({
       where: {
         chaine_id: chaineId,
         actif: true,
-        published_at: { lt: cutoffDate },
+        video_id: { notIn: videoIds },
       },
       data: { actif: false },
     });
@@ -268,6 +335,7 @@ export class YoutubeService {
       select: { id: true },
     });
 
+    const quotaAvant = this.quotaUnitsUsed;
     let videosUpserted = 0;
     let videosArchived = 0;
     let erreurs = 0;
@@ -283,12 +351,149 @@ export class YoutubeService {
       }
     }
 
+    this.logger.log(
+      `Coût quota YouTube de cette synchronisation : ~${this.quotaUnitsUsed - quotaAvant} unités ` +
+        `(cumul du jour : ${this.quotaUnitsUsed}/${YoutubeService.DAILY_QUOTA_BUDGET}).`,
+    );
+
     return {
       chaines_traitees: chaines.length,
       videos_upserted: videosUpserted,
       videos_archived: videosArchived,
       erreurs,
     };
+  }
+
+  // ─── Résolution de chaîne (admin) ──────────────────────────────────────────
+
+  private mapChannelItem(item: YtChannelItem): ResolvedChannel {
+    return {
+      channel_id: item.id ?? '',
+      nom: item.snippet.title,
+      description: item.snippet.description ?? '',
+      thumbnail_url:
+        item.snippet.thumbnails?.medium?.url ??
+        item.snippet.thumbnails?.default?.url ??
+        null,
+      subscriber_count:
+        item.statistics && !item.statistics.hiddenSubscriberCount
+          ? parseInt(item.statistics.subscriberCount ?? '0', 10)
+          : null,
+    };
+  }
+
+  private mapSearchItem(item: YtSearchItem): ResolvedChannel {
+    return {
+      channel_id: item.id.channelId,
+      nom: item.snippet.title,
+      description: item.snippet.description ?? '',
+      thumbnail_url:
+        item.snippet.thumbnails?.medium?.url ??
+        item.snippet.thumbnails?.default?.url ??
+        null,
+      subscriber_count: null,
+    };
+  }
+
+  private async fetchChannelsByIds(ids: string[]): Promise<ResolvedChannel[]> {
+    const url = new URL(`${YT_API}/channels`);
+    url.searchParams.set('part', 'snippet,statistics');
+    url.searchParams.set('id', ids.join(','));
+    url.searchParams.set('key', this.apiKey);
+
+    this.trackQuota(1, 'channels.list (by id)');
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`YouTube channels.list échoué: ${res.status}`);
+    const json = (await res.json()) as { items?: YtChannelItem[] };
+    return (json.items ?? []).map((item) => this.mapChannelItem(item));
+  }
+
+  private async fetchChannelByHandle(
+    handle: string,
+  ): Promise<ResolvedChannel | null> {
+    const url = new URL(`${YT_API}/channels`);
+    url.searchParams.set('part', 'snippet,statistics');
+    url.searchParams.set('forHandle', handle);
+    url.searchParams.set('key', this.apiKey);
+
+    this.trackQuota(1, 'channels.list (forHandle)');
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const json = (await res.json()) as { items?: YtChannelItem[] };
+    const item = json.items?.[0];
+    return item ? this.mapChannelItem(item) : null;
+  }
+
+  private async fetchChannelByUsername(
+    username: string,
+  ): Promise<ResolvedChannel | null> {
+    const url = new URL(`${YT_API}/channels`);
+    url.searchParams.set('part', 'snippet,statistics');
+    url.searchParams.set('forUsername', username);
+    url.searchParams.set('key', this.apiKey);
+
+    this.trackQuota(1, 'channels.list (forUsername)');
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const json = (await res.json()) as { items?: YtChannelItem[] };
+    const item = json.items?.[0];
+    return item ? this.mapChannelItem(item) : null;
+  }
+
+  private async searchChannels(query: string): Promise<ResolvedChannel[]> {
+    this.resetQuotaIfNewDay();
+    if (this.searchCallsToday >= YoutubeService.MAX_SEARCH_CALLS_PER_DAY) {
+      throw new BadRequestException(
+        'Limite quotidienne de recherches de chaînes atteinte (protection du ' +
+          'quota gratuit YouTube). Réessayez demain, ou collez directement le ' +
+          "lien ou l'@identifiant de la chaîne (bien moins coûteux en quota).",
+      );
+    }
+    this.searchCallsToday += 1;
+
+    const url = new URL(`${YT_API}/search`);
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('type', 'channel');
+    url.searchParams.set('maxResults', '5');
+    url.searchParams.set('q', query);
+    url.searchParams.set('key', this.apiKey);
+
+    this.trackQuota(YoutubeService.SEARCH_UNIT_COST, 'search.list');
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`YouTube search.list échoué: ${res.status}`);
+    const json = (await res.json()) as { items?: YtSearchItem[] };
+    return (json.items ?? []).map((item) => this.mapSearchItem(item));
+  }
+
+  /**
+   * Résout une entrée admin (URL de chaîne, @handle, ou simple nom recherché)
+   * en un ou plusieurs candidats — évite d'exiger l'ID technique `UCxxxx…`,
+   * introuvable dans l'UI YouTube moderne (@handles).
+   */
+  async resolveChannels(rawInput: string): Promise<ResolvedChannel[]> {
+    const input = rawInput.trim();
+    if (!input) return [];
+
+    const idMatch = input.match(/UC[\w-]{22}/);
+    if (idMatch) {
+      const results = await this.fetchChannelsByIds([idMatch[0]]);
+      if (results.length > 0) return results;
+    }
+
+    const handleMatch = input.match(/@[\w.-]{3,30}/);
+    if (handleMatch) {
+      const result = await this.fetchChannelByHandle(handleMatch[0]);
+      if (result) return [result];
+    }
+
+    const userMatch = input.match(/youtube\.com\/(?:user|c)\/([\w-]+)/i);
+    if (userMatch) {
+      const result = await this.fetchChannelByUsername(userMatch[1]);
+      if (result) return [result];
+    }
+
+    const searchTerm = handleMatch ? handleMatch[0].slice(1) : input;
+    return this.searchChannels(searchTerm);
   }
 
   // ─── CRUD chaînes (admin) ──────────────────────────────────────────────────
@@ -311,7 +516,22 @@ export class YoutubeService {
         actif: dto.actif ?? true,
       },
     });
-    return { id: chaine.id, nom: chaine.nom };
+
+    // Import immédiat des dernières vidéos — évite d'attendre le cron ou un
+    // clic manuel sur "Synchroniser" juste après avoir référencé la chaîne.
+    let videosImportees = 0;
+    if (chaine.actif) {
+      try {
+        const sync = await this.syncChannel(chaine.id);
+        videosImportees = sync.upserted;
+      } catch (err) {
+        this.logger.warn(
+          `Import immédiat échoué pour la nouvelle chaîne ${chaine.id}: ${String(err)}`,
+        );
+      }
+    }
+
+    return { id: chaine.id, nom: chaine.nom, videos_importees: videosImportees };
   }
 
   async listChaines(includeInactive = false) {
@@ -325,6 +545,7 @@ export class YoutubeService {
         description: true,
         thumbnail_url: true,
         actif: true,
+        max_videos: true,
         last_synced_at: true,
         _count: { select: { videos: { where: { actif: true } } } },
       },
@@ -343,6 +564,28 @@ export class YoutubeService {
     if (!chaine) throw new NotFoundException('Chaîne introuvable.');
     await this.prisma.chaineYoutube.update({ where: { id }, data: { actif } });
     return { id, actif };
+  }
+
+  /**
+   * Change le nombre de vidéos conservées pour une chaîne (borné 5-60 par le
+   * DTO) puis resynchronise immédiatement pour appliquer la nouvelle limite
+   * sans attendre le cron.
+   */
+  async updateChaine(id: string, dto: UpdateChaineDto) {
+    const chaine = await this.prisma.chaineYoutube.findUnique({
+      where: { id },
+    });
+    if (!chaine) throw new NotFoundException('Chaîne introuvable.');
+
+    if (dto.max_videos !== undefined) {
+      await this.prisma.chaineYoutube.update({
+        where: { id },
+        data: { max_videos: dto.max_videos },
+      });
+    }
+
+    const sync = await this.syncChannel(id);
+    return { id, max_videos: dto.max_videos ?? chaine.max_videos, ...sync };
   }
 
   async deleteChaine(id: string) {

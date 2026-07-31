@@ -149,6 +149,12 @@ enum StatutUserDefi {
   ECHOUE
 }
 
+enum StatutEtablissement {
+  ACTIF
+  SUSPENDU
+  EXPIRE
+}
+
 // ─── Tables indépendantes ────────────────────────────────────────────────────
 
 model Personne {
@@ -164,15 +170,15 @@ model Personne {
   points           Int            @default(0)
 
   // Gamification Duolingo-style
-  streak_actuel            Int       @default(0)
-  streak_max               Int       @default(0)
-  derniere_lecture_date    DateTime? @db.Date
-  objectif_minutes_jour    Int       @default(20)
-  minutes_lus_aujourd_hui  Int       @default(0)
+  streak_actuel           Int       @default(0)
+  streak_max              Int       @default(0)
+  derniere_lecture_date   DateTime? @db.Date
+  objectif_minutes_jour   Int       @default(20)
+  minutes_lus_aujourd_hui Int       @default(0)
 
-  deleted_at       DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @default(now()) @updatedAt
+  deleted_at DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now()) @updatedAt
 
   auth Auth?
 
@@ -217,7 +223,7 @@ model PlanAbonnement {
   prix        Decimal    @db.Decimal(10, 2)
   statut      StatutPlan @default(ACTIF)
   duree_jours Int
-  devise      String     @default("XOF") @db.VarChar(10)
+  devise      String     @default("XAF") @db.VarChar(10)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now()) @updatedAt
 
@@ -278,16 +284,17 @@ model Livre {
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @default(now()) @updatedAt
 
-  appartenir      Appartenir[]
-  appartient      Appartient[]
-  livre_auteurs   LivreAuteur[]
-  tokens_lecture  TokenLecture[]
-  progressions    ProgressionLecture[]
-  commentaires    Commentaire[]
-  statistique     StatistiqueLivre?
-  defis           Defi[]
-  notations       Noter[]
-  recommandations Recommandation[]
+  appartenir       Appartenir[]
+  appartient       Appartient[]
+  livre_auteurs    LivreAuteur[]
+  tokens_lecture   TokenLecture[]
+  progressions     ProgressionLecture[]
+  sessions_lecture SessionLecture[]
+  commentaires     Commentaire[]
+  statistique      StatistiqueLivre?
+  defis            Defi[]
+  notations        Noter[]
+  recommandations  Recommandation[]
 
   @@index([titre], map: "idx_livre_titre")
   @@index([statut], map: "idx_livre_statut")
@@ -320,19 +327,21 @@ model Auth {
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @default(now()) @updatedAt
 
-  personne        Personne              @relation(fields: [personne_id], references: [id], onDelete: Cascade)
-  otps            Otp[]
-  tokens_lecture  TokenLecture[]
-  paiements       Paiement[]
-  abonnements     Abonnement[]
-  progressions    ProgressionLecture[]
-  commentaires    Commentaire[]
-  notifications   Notification[]
-  historiques     HistoriqueRecherche[]
-  recommandations Recommandation[]
-  notations       Noter[]
-  userbadges      UserBadge[]
-  userdefis       UserDefi[]
+  personne                  Personne              @relation(fields: [personne_id], references: [id], onDelete: Cascade)
+  otps                      Otp[]
+  tokens_lecture            TokenLecture[]
+  paiements                 Paiement[]
+  abonnements               Abonnement[]
+  progressions              ProgressionLecture[]
+  sessions_lecture          SessionLecture[]
+  commentaires              Commentaire[]
+  notifications             Notification[]
+  historiques               HistoriqueRecherche[]
+  recommandations           Recommandation[]
+  notations                 Noter[]
+  userbadges                UserBadge[]
+  userdefis                 UserDefi[]
+  etablissement_memberships EtablissementMembre[]
 
   @@index([email], map: "idx_auth_email")
   @@index([statut], map: "idx_auth_statut")
@@ -383,7 +392,7 @@ model Paiement {
   auth_id          String         @db.Uuid
   plan_id          String         @db.Uuid
   montant          Decimal        @db.Decimal(10, 2)
-  devise           String         @default("XOF") @db.VarChar(10)
+  devise           String         @default("XAF") @db.VarChar(10)
   operateur        String?        @db.VarChar(50)
   numero_telephone String?        @db.VarChar(20)
   ref_transaction  String?        @unique @db.VarChar(200)
@@ -422,6 +431,84 @@ model Abonnement {
   @@map("abonnement")
 }
 
+model Etablissement {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom               String              @db.VarChar(200)
+  email_contact     String?             @db.VarChar(255)
+  telephone_contact String?             @db.VarChar(20)
+  code_invitation   String              @unique @db.VarChar(20)
+  nb_users_max      Int
+  prix              Decimal             @db.Decimal(10, 2)
+  devise            String              @default("XAF") @db.VarChar(10)
+  duree_jours       Int
+  statut            StatutEtablissement @default(ACTIF)
+  date_debut        DateTime
+  date_fin          DateTime
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
+
+  membres  EtablissementMembre[]
+  paiement PaiementEtablissement?
+
+  @@index([statut, date_fin], map: "idx_etablissement_statut_fin")
+  @@map("etablissement")
+}
+
+model EtablissementMembre {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  etablissement_id String    @db.Uuid
+  auth_id          String    @db.Uuid
+  rejoint_le       DateTime  @default(now())
+  retire_le        DateTime?
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id], onDelete: Cascade)
+  auth          Auth          @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+
+  @@index([etablissement_id, retire_le], map: "idx_etab_membre_etablissement_actif")
+  @@index([auth_id, retire_le], map: "idx_etab_membre_auth_actif")
+  @@map("etablissement_membre")
+}
+
+model EtablissementOffre {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom          String     @db.VarChar(200)
+  nb_users_max Int
+  prix         Decimal    @db.Decimal(10, 2)
+  devise       String     @default("XAF") @db.VarChar(10)
+  duree_jours  Int
+  statut       StatutPlan @default(ACTIF)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @default(now()) @updatedAt
+
+  paiements PaiementEtablissement[]
+
+  @@index([statut], map: "idx_etablissement_offre_statut")
+  @@map("etablissement_offre")
+}
+
+model PaiementEtablissement {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offre_id          String         @db.Uuid
+  nom_etablissement String         @db.VarChar(200)
+  email_contact     String         @db.VarChar(255)
+  telephone_contact String?        @db.VarChar(20)
+  montant           Decimal        @db.Decimal(10, 2)
+  devise            String         @default("XAF") @db.VarChar(10)
+  operateur         String?        @db.VarChar(50)
+  numero_telephone  String?        @db.VarChar(20)
+  ref_transaction   String?        @unique @db.VarChar(200)
+  statut            StatutPaiement @default(EN_ATTENTE)
+  etablissement_id  String?        @unique @db.Uuid
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @default(now()) @updatedAt
+
+  offre         EtablissementOffre @relation(fields: [offre_id], references: [id], onDelete: Restrict)
+  etablissement Etablissement?     @relation(fields: [etablissement_id], references: [id], onDelete: SetNull)
+
+  @@index([statut], map: "idx_paiement_etab_statut")
+  @@map("paiement_etablissement")
+}
+
 model ProgressionLecture {
   id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auth_id             String            @db.Uuid
@@ -445,6 +532,21 @@ model ProgressionLecture {
   @@index([livre_id], map: "idx_progression_livre")
   @@index([statut], map: "idx_progression_statut")
   @@map("progressionLecture")
+}
+
+model SessionLecture {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_id   String   @db.Uuid
+  livre_id  String   @db.Uuid
+  duree_min Int
+  createdAt DateTime @default(now())
+
+  auth  Auth  @relation(fields: [auth_id], references: [id], onDelete: Cascade)
+  livre Livre @relation(fields: [livre_id], references: [id], onDelete: Cascade)
+
+  @@index([auth_id, createdAt], map: "idx_session_lecture_auth")
+  @@index([createdAt], map: "idx_session_lecture_created")
+  @@map("session_lecture")
 }
 
 model Commentaire {
@@ -570,6 +672,7 @@ model ChaineYoutube {
   description    String?
   thumbnail_url  String?   @db.VarChar(500)
   actif          Boolean   @default(true)
+  max_videos     Int?
   last_synced_at DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @default(now()) @updatedAt

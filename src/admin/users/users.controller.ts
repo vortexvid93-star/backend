@@ -20,12 +20,14 @@ import { AdminRoleGuard } from '../guards/admin-role.guard';
 import { BanUserDto } from './dto/ban-user.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { AdminUsersQueryDto } from './dto/admin-users-query.dto';
+import type { AdminStatsReadingHabitsQueryDto } from '../stats/dto/admin-stats-reading-habits-query.dto';
 import {
   AdminUsersBanDocs,
   AdminUsersControllerDocs,
   AdminUsersCreateDocs,
   AdminUsersDetailDocs,
   AdminUsersListDocs,
+  AdminUsersReadingHabitsDocs,
   AdminUsersUnbanDocs,
 } from './users.controller.docs';
 import { AdminUsersService } from './users.service';
@@ -56,6 +58,16 @@ export class AdminUsersController {
   @HttpCode(HttpStatus.OK)
   getUserDetail(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminUsersService.getUserDetail(id);
+  }
+
+  @Get(':id/reading-habits')
+  @AdminUsersReadingHabitsDocs()
+  @HttpCode(HttpStatus.OK)
+  getReadingHabits(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: AdminStatsReadingHabitsQueryDto,
+  ) {
+    return this.adminUsersService.getReadingHabits(id, query);
   }
 
   @Patch(':id/ban')

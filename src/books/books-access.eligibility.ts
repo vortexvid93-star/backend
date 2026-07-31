@@ -6,6 +6,7 @@ import {
 } from '../../generated/prisma/enums';
 import type { PrismaService } from '../prisma/prisma.service';
 import { activeSubscriptionWhere } from '../payments/subscription-query.util';
+import { hasActiveEtablissementMembership } from '../etablissements/etablissement-access.util';
 
 export type AccesRessourceType = 'CLOUDINARY' | 'EXTERNE' | 'INDISPONIBLE';
 
@@ -68,8 +69,11 @@ export async function evaluateBookAccess(
   const abonnement = await prisma.abonnement.findFirst({
     where: activeSubscriptionWhere(authId),
   });
+  const aAcces =
+    Boolean(abonnement) ||
+    (await hasActiveEtablissementMembership(prisma, authId));
 
-  if (!abonnement) {
+  if (!aAcces) {
     codes.push('ABONNEMENT_REQUIS');
   }
 
@@ -78,9 +82,7 @@ export async function evaluateBookAccess(
   });
 
   const peut_lire =
-    livre.statut === StatutLivre.PUBLIE &&
-    ressource_disponible &&
-    Boolean(abonnement);
+    livre.statut === StatutLivre.PUBLIE && ressource_disponible && aAcces;
 
   if (!livre.is_downloadable) {
     codes.push('NON_TELECHARGEABLE');

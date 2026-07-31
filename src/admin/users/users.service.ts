@@ -10,6 +10,8 @@ import {
   AuthProvider,
   AuthRole,
   AuthStatut,
+  StatutAbonnement,
+  StatutEtablissement,
   StatutUserDefi,
 } from '../../../generated/prisma/enums';
 import type { Prisma } from '../../../generated/prisma/client';
@@ -23,6 +25,14 @@ import {
 } from '../../common/normalize-email.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { activeSubscriptionWhere } from '../../payments/subscription-query.util';
+import { hasActiveEtablissementMembership } from '../../etablissements/etablissement-access.util';
+import { StreakService } from '../../challenges/streak.service';
+import {
+  dateDepuisJours,
+  parsePeriodeJours,
+} from '../stats/admin-periode.util';
+import { computeReadingHabits } from '../stats/admin-reading-habits.util';
+import type { AdminStatsReadingHabitsQueryDto } from '../stats/dto/admin-stats-reading-habits-query.dto';
 import type { AdminUsersQueryDto } from './dto/admin-users-query.dto';
 import type { BanUserDto } from './dto/ban-user.dto';
 import type { CreateAdminDto } from './dto/create-admin.dto';
@@ -41,6 +51,7 @@ export class AdminUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: AuthCacheService,
+    private readonly streakService: StreakService,
   ) {}
 
   async listUsers(query: AdminUsersQueryDto) {
@@ -49,25 +60,62 @@ export class AdminUsersService {
     const skip = (page - 1) * limit;
 
     const q = query.q?.trim();
-    const where: Prisma.AuthWhereInput = {
-      ...(query.statut ? { statut: query.statut } : {}),
-      ...(query.role ? { role: query.role } : {}),
+    const now = new Date();
+
+    const conditions: Prisma.AuthWhereInput[] = [
+      ...(query.statut ? [{ statut: query.statut }] : []),
+      ...(query.role ? [{ role: query.role }] : []),
       ...(q
-        ? {
-            OR: [
-              { email: { contains: q, mode: 'insensitive' } },
-              {
-                personne: {
-                  OR: [
-                    { nom: { contains: q, mode: 'insensitive' } },
-                    { prenom: { contains: q, mode: 'insensitive' } },
-                  ],
+        ? [
+            {
+              OR: [
+                { email: { contains: q, mode: 'insensitive' as const } },
+                {
+                  personne: {
+                    OR: [
+                      { nom: { contains: q, mode: 'insensitive' as const } },
+                      { prenom: { contains: q, mode: 'insensitive' as const } },
+                    ],
+                  },
+                },
+              ],
+            },
+          ]
+        : []),
+    ];
+
+    if (query.abonnement_actif !== undefined) {
+      const activeCondition: Prisma.AuthWhereInput = {
+        OR: [
+          {
+            abonnements: {
+              some: {
+                statut: StatutAbonnement.ACTIF,
+                date_debut: { lte: now },
+                date_fin: { gt: now },
+              },
+            },
+          },
+          {
+            etablissement_memberships: {
+              some: {
+                retire_le: null,
+                etablissement: {
+                  statut: StatutEtablissement.ACTIF,
+                  date_fin: { gt: now },
                 },
               },
-            ],
-          }
-        : {}),
-    };
+            },
+          },
+        ],
+      };
+      conditions.push(
+        query.abonnement_actif ? activeCondition : { NOT: activeCondition },
+      );
+    }
+
+    const where: Prisma.AuthWhereInput =
+      conditions.length > 0 ? { AND: conditions } : {};
 
     const [rows, total] = await Promise.all([
       this.prisma.auth.findMany({
@@ -80,15 +128,17 @@ export class AdminUsersService {
       this.prisma.auth.count({ where }),
     ]);
 
-    const now = new Date();
     const data = await Promise.all(
       rows.map(async (auth) => {
-        const abonnement = await this.prisma.abonnement.findFirst({
-          where: activeSubscriptionWhere(auth.id, now),
-          orderBy: { date_debut: 'desc' },
-          include: { plan: true },
-        });
-        return mapAdminUserListItem(auth, abonnement);
+        const [abonnement, membreEtablissement] = await Promise.all([
+          this.prisma.abonnement.findFirst({
+            where: activeSubscriptionWhere(auth.id, now),
+            orderBy: { date_debut: 'desc' },
+            include: { plan: true },
+          }),
+          hasActiveEtablissementMembership(this.prisma, auth.id, now),
+        ]);
+        return mapAdminUserListItem(auth, abonnement, membreEtablissement);
       }),
     );
 
@@ -113,6 +163,7 @@ export class AdminUsersService {
       nb_commentaires,
       nb_notes,
       nb_defis_completes,
+      membre_etablissement,
     ] = await Promise.all([
       this.prisma.abonnement.findMany({
         where: { auth_id: authId },
@@ -129,6 +180,7 @@ export class AdminUsersService {
       this.prisma.userDefi.count({
         where: { auth_id: authId, statut: StatutUserDefi.COMPLETE },
       }),
+      hasActiveEtablissementMembership(this.prisma, authId),
     ]);
 
     return {
@@ -139,6 +191,44 @@ export class AdminUsersService {
       nb_commentaires,
       nb_notes,
       nb_defis_completes,
+      membre_etablissement,
+    };
+  }
+
+  async getReadingHabits(
+    authId: string,
+    query: AdminStatsReadingHabitsQueryDto,
+  ) {
+    const auth = await this.prisma.auth.findUnique({ where: { id: authId } });
+    if (!auth) {
+      throw new NotFoundException('Utilisateur introuvable.');
+    }
+
+    const jours = parsePeriodeJours(query.periode, '30j');
+    const since = dateDepuisJours(jours);
+    const sincePrecedente = dateDepuisJours(jours * 2);
+
+    const [sessions, sessionsPrecedentes, dailyStats] = await Promise.all([
+      this.prisma.sessionLecture.findMany({
+        where: { auth_id: authId, createdAt: { gte: since } },
+        select: { createdAt: true, duree_min: true },
+      }),
+      this.prisma.sessionLecture.findMany({
+        where: {
+          auth_id: authId,
+          createdAt: { gte: sincePrecedente, lt: since },
+        },
+        select: { duree_min: true },
+      }),
+      this.streakService.getDailyStats(authId),
+    ]);
+
+    const habitudes = computeReadingHabits(sessions, sessionsPrecedentes);
+
+    return {
+      ...habitudes,
+      streak_actuel: dailyStats.streak_actuel,
+      streak_max: dailyStats.streak_max,
     };
   }
 
