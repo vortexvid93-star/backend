@@ -4,11 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AuthStatut,
   StatutCommentaire,
   StatutDefi,
   StatutProgression,
   StatutUserDefi,
 } from '../../generated/prisma/enums';
+import { AuthCacheService } from '../auth/services/auth-cache.service';
 import { ChallengesEngineService } from '../challenges/challenges-engine.service';
 import { RecommendationsService } from '../discovery/recommendations.service';
 import { computeProgressPercent } from '../challenges/challenges-progress.util';
@@ -44,6 +46,7 @@ export class ProfileService {
     private readonly cloudinary: CloudinaryService,
     private readonly challengesEngine: ChallengesEngineService,
     private readonly recommendationsService: RecommendationsService,
+    private readonly authCache: AuthCacheService,
   ) {}
 
   async getProfile(authId: string) {
@@ -318,6 +321,8 @@ export class ProfileService {
               couverture_url: true,
               type_livre: true,
               nombre_pages: true,
+              cloudinary_public_id: true,
+              url_externe_livre: true,
               livre_auteurs: {
                 select: { auteur: { select: { nom: true, prenom: true } } },
                 take: 1,
@@ -1004,6 +1009,57 @@ export class ProfileService {
   async getStats(authId: string) {
     const auth = await this.findAuthWithActivePersonne(authId);
     return this.buildStatsSnapshot(authId, auth.personne.points);
+  }
+
+  /**
+   * Suppression de compte à la demande de l'utilisateur : anonymise Personne/Auth
+   * (soft-delete via `deleted_at`, conforme à la politique de confidentialité) et
+   * révoque la session en cours. Abonnements/paiements sont conservés (FK Restrict,
+   * obligation légale de conservation comptable — voir Article 7 de la politique).
+   */
+  async deleteAccount(authId: string, jti: string | undefined) {
+    const auth = await this.findAuthWithActivePersonne(authId);
+
+    await this.cloudinary.deleteByUrl(auth.personne.photo_profil_url);
+
+    await this.prisma.$transaction([
+      this.prisma.personne.update({
+        where: { id: auth.personne_id },
+        data: {
+          deleted_at: new Date(),
+          nom: 'Utilisateur',
+          prenom: 'supprimé',
+          date_naissance: null,
+          photo_profil_url: null,
+          bio: null,
+          genre: null,
+          ecole: null,
+          niveau: null,
+        },
+      }),
+      this.prisma.auth.update({
+        where: { id: authId },
+        data: {
+          email: `deleted-${authId}@blinks.invalid`,
+          numero_telephone: null,
+          mot_de_passe_hash: null,
+          google_id: null,
+          statut: AuthStatut.BANNI,
+          refresh_token: null,
+          refresh_token_expires_at: null,
+          jti: null,
+          expo_push_token: null,
+          fcm_push_token: null,
+          push_platform: null,
+        },
+      }),
+    ]);
+
+    if (jti) {
+      this.authCache.blacklistJti(jti);
+    }
+
+    return { message: 'Compte et données personnelles supprimés.' };
   }
 
   private async findAuthWithActivePersonne(authId: string) {

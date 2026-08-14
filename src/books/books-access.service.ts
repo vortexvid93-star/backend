@@ -200,7 +200,7 @@ export class BooksAccessService {
           expires_at: expiresAt,
         },
       });
-    });
+    }, { timeout: BOOKS_CONSTANTS.ACCESS_TOKEN_TRANSACTION_TIMEOUT_MS });
 
     const statistique = await this.prisma.statistiqueLivre.findUnique({
       where: { livre_id: livreId },

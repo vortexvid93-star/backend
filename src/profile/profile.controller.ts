@@ -41,6 +41,7 @@ import {
   ProfileCompletionDocs,
   ProfileControllerDocs,
   ProfileDashboardDocs,
+  ProfileDeleteAccountDocs,
   ProfileDeletePhotoDocs,
   ProfileGetDocs,
   ProfileRatingsDocs,
@@ -244,5 +245,12 @@ export class ProfileController {
     @Body() dto: UpdatePushTokenDto,
   ) {
     return this.profileService.updatePushToken(user.sub, dto);
+  }
+
+  @Delete('account')
+  @ProfileDeleteAccountDocs()
+  @HttpCode(HttpStatus.OK)
+  deleteAccount(@CurrentUser() user: JwtPayload) {
+    return this.profileService.deleteAccount(user.sub, user.jti);
   }
 }

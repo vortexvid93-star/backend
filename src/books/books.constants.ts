@@ -9,4 +9,10 @@ export const BOOKS_CONSTANTS = {
   ANTI_CHEAT_MAX_PAGES_WITHOUT_DURATION: 100,
   /** Tolérance au-delà de la dernière page (lecteur numérique) */
   PROGRESS_PAGE_MARGIN: 5,
+  /**
+   * Délai max pour la transaction interactive de generateAccessToken.
+   * Au-delà du défaut Prisma (5000 ms), la base distante (pooler Supabase)
+   * dépasse régulièrement ce délai en enchaînant ses requêtes séquentielles.
+   */
+  ACCESS_TOKEN_TRANSACTION_TIMEOUT_MS: 15_000,
 } as const;

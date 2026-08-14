@@ -135,6 +135,19 @@ export const ProfileDeletePhotoDocs = () =>
     ApiOkResponse({ type: MessageResponseSchema }),
   );
 
+export const ProfileDeleteAccountDocs = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Supprimer mon compte',
+      description:
+        'Anonymise le compte (nom, email, téléphone, photo, liaison Google) et le ' +
+        'marque comme supprimé, puis révoque la session en cours. Action irréversible ' +
+        'côté utilisateur. Les abonnements/paiements sont conservés pour obligation ' +
+        'légale comptable. **Frontend** : déconnecter et purger le stockage local après succès.',
+    }),
+    ApiOkResponse({ type: MessageResponseSchema }),
+  );
+
 export const ProfileBadgesSummaryDocs = () =>
   applyDecorators(
     ApiOperation({

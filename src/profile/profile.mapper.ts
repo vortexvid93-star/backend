@@ -131,6 +131,22 @@ export function mapDashboardProfile(
   };
 }
 
+/**
+ * Format du fichier livre déduit de l'extension de son URL de stockage.
+ * Pour le PDF, la position de lecture réelle n'est pas trackée (rendu via
+ * Google Docs Viewer) — le frontend s'en sert pour ne pas afficher un
+ * pourcentage trompeur (`page_actuelle` reste figé à 1).
+ */
+function resolveBookFormat(
+  cloudinaryPublicId: string | null,
+  urlExterneLivre: string | null,
+): 'pdf' | 'epub' | 'unknown' {
+  const source = (cloudinaryPublicId ?? urlExterneLivre ?? '').toLowerCase();
+  if (source.endsWith('.pdf')) return 'pdf';
+  if (source.endsWith('.epub')) return 'epub';
+  return 'unknown';
+}
+
 export function mapReadingItem(row: {
   id: string;
   page_actuelle: number;
@@ -146,6 +162,8 @@ export function mapReadingItem(row: {
     couverture_url: string | null;
     type_livre: string;
     nombre_pages: number | null;
+    cloudinary_public_id: string | null;
+    url_externe_livre: string | null;
     livre_auteurs: { auteur: { nom: string; prenom: string | null } }[];
   };
 }) {
@@ -161,6 +179,10 @@ export function mapReadingItem(row: {
       couverture_url: row.livre.couverture_url,
       type_livre: row.livre.type_livre,
       nombre_pages: row.livre.nombre_pages,
+      format: resolveBookFormat(
+        row.livre.cloudinary_public_id,
+        row.livre.url_externe_livre,
+      ),
       auteur,
     },
     page_actuelle: row.page_actuelle,
