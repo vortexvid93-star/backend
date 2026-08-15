@@ -1,9 +1,11 @@
 import {
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthStatut } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthCacheService } from '../services/auth-cache.service';
 import type { JwtPayload } from '../services/token.service';
@@ -33,6 +35,9 @@ export class JwtAuthenticatedGuard extends AuthGuard('jwt') {
     });
     if (!auth) {
       throw new UnauthorizedException('Session invalide.');
+    }
+    if (auth.statut !== AuthStatut.ACTIF) {
+      throw new ForbiddenException('Compte suspendu.');
     }
 
     return true;

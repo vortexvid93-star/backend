@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AuthProvider,
   AuthStatut,
   StatutCommentaire,
   StatutDefi,
@@ -1044,6 +1045,7 @@ export class ProfileService {
           numero_telephone: null,
           mot_de_passe_hash: null,
           google_id: null,
+          auth_provider: AuthProvider.LOCAL,
           statut: AuthStatut.BANNI,
           refresh_token: null,
           refresh_token_expires_at: null,

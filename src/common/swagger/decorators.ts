@@ -24,7 +24,7 @@ export function ApiJwtActiveAccount() {
 }
 
 /**
- * Routes acceptant un JWT valide même si le compte est encore PENDING
+ * Routes exigeant un JWT valide et un compte ACTIF
  * (équivalent à `JwtAuthenticatedGuard`).
  */
 export function ApiJwtAuthenticated() {
@@ -32,6 +32,10 @@ export function ApiJwtAuthenticated() {
     ApiBearerAuth(SWAGGER_BEARER_AUTH),
     ApiUnauthorizedResponse({
       description: 'JWT absent, expiré ou révoqué.',
+    }),
+    ApiForbiddenResponse({
+      description:
+        'Compte PENDING, BANNI ou statut non actif (doit être ACTIF).',
     }),
   );
 }

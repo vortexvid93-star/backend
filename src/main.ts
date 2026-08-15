@@ -62,6 +62,9 @@ async function bootstrap() {
   );
   setupSwagger(app);
   const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port, '0.0.0.0');
+  // Écoute en dual-stack (IPv6 + IPv4) : sur Windows, `localhost` se résout d'abord
+  // en `::1` — sans bind IPv6, un autre process pouvait squatter `::1:3000` et
+  // renvoyer des 404 sans en-têtes CORS au front web.
+  await app.listen(port, '::');
 }
 void bootstrap();

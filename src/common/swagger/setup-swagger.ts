@@ -32,7 +32,7 @@ function buildSwaggerConfig() {
         '|-------|--------|',
         '| Aucun | Route publique |',
         '| `JwtAuthGuard` | JWT + compte **ACTIF** |',
-        '| `JwtAuthenticatedGuard` | JWT valide (PENDING accepté) |',
+        '| `JwtAuthenticatedGuard` | JWT + compte **ACTIF** (PENDING/BANNI rejetés) |',
         '| `ActiveAccountGuard` | Compte **ACTIF** (utilisé avec JWT sur paiements) |',
         '',
         '## Pagination',
