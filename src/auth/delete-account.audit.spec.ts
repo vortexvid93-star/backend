@@ -4,6 +4,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthGuard } from '@nestjs/passport';
+import type { TokenPayload } from 'google-auth-library';
 import {
   BadRequestException,
   ForbiddenException,
@@ -139,7 +140,9 @@ describe('Audit flux post-suppression de compte', () => {
   const mockGoogleVerify = () =>
     jest
       .spyOn(
-        authService as unknown as { verifyGoogleToken: unknown },
+        authService as unknown as {
+          verifyGoogleToken: (idToken: string) => Promise<Partial<TokenPayload>>;
+        },
         'verifyGoogleToken',
       )
       .mockResolvedValue(GOOGLE_TOKEN_PAYLOAD);

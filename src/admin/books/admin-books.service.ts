@@ -248,13 +248,10 @@ export class AdminBooksService {
         data,
       });
 
-      if (
-        couvertureFile &&
-        existing.couverture_url &&
-        existing.couverture_url !== updated.couverture_url
-      ) {
-        await this.cloudinary.deleteByUrl(existing.couverture_url);
-      }
+      // Pas de suppression de l'ancienne couverture ici : uploadBookCover()
+      // réutilise le même public_id (livreId) avec overwrite: true, donc
+      // l'ancienne et la nouvelle couverture sont la même ressource Cloudinary —
+      // la supprimer détruirait l'image qui vient d'être uploadée.
 
       return {
         id: updated.id,

@@ -3,6 +3,7 @@ jest.mock('../challenges/challenges-engine.service', () => ({
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
+import type { TokenPayload } from 'google-auth-library';
 import { ProfileService } from './profile.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -222,7 +223,9 @@ describe('Non-régression fonctionnelle — réinscription Google après suppres
 
     jest
       .spyOn(
-        authService as unknown as { verifyGoogleToken: unknown },
+        authService as unknown as {
+          verifyGoogleToken: (idToken: string) => Promise<Partial<TokenPayload>>;
+        },
         'verifyGoogleToken',
       )
       .mockResolvedValue(GOOGLE_TOKEN_PAYLOAD);
