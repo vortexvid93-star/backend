@@ -62,6 +62,8 @@ export class BooksCatalogService {
       q: query.q,
       type_livre: query.type_livre,
       categorie_id: query.categorie_id,
+      categorie_ids: query.categorie_ids,
+      min_rating: query.min_rating,
       auteur_id: query.auteur_id,
       langue: query.langue,
       is_downloadable: query.is_downloadable,

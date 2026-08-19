@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -29,6 +30,27 @@ export class BooksCatalogQueryDto {
   @IsOptional()
   @IsUUID()
   categorie_id?: string;
+
+  /** UUID de catégories séparés par des virgules (filtre multi-sélection). */
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean)
+      : value,
+  )
+  @IsUUID('4', { each: true })
+  categorie_ids?: string[];
+
+  /** Note moyenne minimale (0 à 5). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  min_rating?: number;
 
   /** UUID de l’auteur. */
   @IsOptional()

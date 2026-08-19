@@ -23,6 +23,10 @@ export interface PublishedLivreFilters {
   langue?: string;
   is_downloadable?: boolean;
   bibliotheque_id?: string;
+  /** Filtre multi-catégories (au moins une correspondance). */
+  categorie_ids?: string[];
+  /** Note moyenne minimale (0 à 5). */
+  min_rating?: number;
 }
 
 /** Recherche sur les métadonnées catalogue (pas le contenu du fichier hébergé). */
@@ -48,6 +52,13 @@ export function buildLivreMetadataSearch(q: string): Prisma.LivreWhereInput {
           },
         },
       },
+      {
+        appartenir: {
+          some: {
+            categorie: { nom: { contains: term, mode: 'insensitive' } },
+          },
+        },
+      },
     ],
   };
 }
@@ -57,6 +68,18 @@ export function buildPublishedLivreWhere(
 ): Prisma.LivreWhereInput {
   const q = filters.q?.trim();
 
+  // Les deux filtres de catégorie portent sur la même relation : on les combine
+  // via AND plutôt que par étalement, sinon le second écrase silencieusement
+  // le premier lorsqu'ils sont fournis ensemble.
+  const categoryClauses: Prisma.LivreWhereInput[] = [
+    ...(filters.categorie_id
+      ? [{ appartenir: { some: { categorie_id: filters.categorie_id } } }]
+      : []),
+    ...(filters.categorie_ids?.length
+      ? [{ appartenir: { some: { categorie_id: { in: filters.categorie_ids } } } }]
+      : []),
+  ];
+
   return {
     statut: StatutLivre.PUBLIE,
     ...(q ? buildLivreMetadataSearch(q) : {}),
@@ -65,8 +88,9 @@ export function buildPublishedLivreWhere(
     ...(filters.is_downloadable !== undefined
       ? { is_downloadable: filters.is_downloadable }
       : {}),
-    ...(filters.categorie_id
-      ? { appartenir: { some: { categorie_id: filters.categorie_id } } }
+    ...(categoryClauses.length ? { AND: categoryClauses } : {}),
+    ...(filters.min_rating != null
+      ? { statistique: { note_moyenne: { gte: filters.min_rating } } }
       : {}),
     ...(filters.auteur_id
       ? { livre_auteurs: { some: { auteur_id: filters.auteur_id } } }

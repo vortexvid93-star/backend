@@ -157,6 +157,15 @@ export function buildSearchTextWhere(term: string): Prisma.LivreWhereInput {
           },
         },
       },
+      // Nom de catégorie : permet de trouver les livres en tapant « Marketing »,
+      // « Histoire »… dans la barre de recherche, comme attendu par les utilisateurs.
+      {
+        appartenir: {
+          some: {
+            categorie: { nom: { contains: q, mode: 'insensitive' } },
+          },
+        },
+      },
     ],
   };
 }
