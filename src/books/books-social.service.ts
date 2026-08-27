@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { StatutCommentaire } from '../../generated/prisma/enums';
+import {
+  AuthRole,
+  StatutCommentaire,
+  TypeNotification,
+} from '../../generated/prisma/enums';
 import { buildPaginationMeta } from '../common/pagination.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { BooksCatalogService } from './books-catalog.service';
@@ -12,6 +16,7 @@ import { assertActiveSubscription } from './books-subscription.util';
 import type { CommentsQueryDto } from './dto/comments-query.dto';
 import type { CreateCommentDto } from './dto/create-comment.dto';
 import type { RateBookDto } from './dto/rate-book.dto';
+import type { ReportCommentDto } from './dto/report-comment.dto';
 import type { UpdateCommentDto } from './dto/update-comment.dto';
 
 @Injectable()
@@ -115,6 +120,76 @@ export class BooksSocialService {
     });
 
     return { message: 'Commentaire supprimé.' };
+  }
+
+  /**
+   * Signalement d'un commentaire par un utilisateur.
+   *
+   * Requis par les règles de contenu généré par les utilisateurs (App Store 1.2
+   * / Google Play UGC) : chaque signalement crée une alerte pour tous les
+   * administrateurs, qui peuvent ensuite modérer via l'espace d'administration.
+   */
+  async reportComment(
+    authId: string,
+    livreId: string,
+    commentId: string,
+    dto: ReportCommentDto,
+  ) {
+    await this.catalog.findPublishedBook(livreId);
+
+    const comment = await this.prisma.commentaire.findFirst({
+      where: {
+        id: commentId,
+        livre_id: livreId,
+        statut: StatutCommentaire.PUBLIE,
+      },
+      include: { livre: { select: { titre: true } } },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Commentaire introuvable.');
+    }
+
+    if (comment.auth_id === authId) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas signaler votre propre commentaire.',
+      );
+    }
+
+    const admins = await this.prisma.auth.findMany({
+      where: { role: AuthRole.ADMIN },
+      select: { id: true },
+    });
+
+    if (admins.length > 0) {
+      const extrait =
+        comment.contenu.length > 160
+          ? `${comment.contenu.slice(0, 160)}…`
+          : comment.contenu;
+
+      await this.prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          auth_id: admin.id,
+          type: TypeNotification.ALERTE,
+          titre: `Avis signalé — ${dto.motif}`,
+          contenu: [
+            `Livre : ${comment.livre.titre}`,
+            `Commentaire : ${comment.id}`,
+            `Auteur du commentaire : ${comment.auth_id}`,
+            `Signalé par : ${authId}`,
+            dto.details ? `Précisions : ${dto.details}` : null,
+            `Extrait : ${extrait}`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        })),
+      });
+    }
+
+    return {
+      message:
+        'Merci, votre signalement a été transmis à notre équipe de modération.',
+    };
   }
 
   async rateBook(authId: string, livreId: string, dto: RateBookDto) {

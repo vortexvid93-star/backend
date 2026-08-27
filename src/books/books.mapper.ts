@@ -184,6 +184,9 @@ export function mapComment(
     contenu: comment.contenu,
     createdAt: comment.createdAt.toISOString(),
     auteur: {
+      // Identifiant nécessaire côté client pour masquer les avis d'un
+      // utilisateur bloqué (obligation « contenu généré par les utilisateurs »).
+      id: comment.auth_id,
       nom: comment.auth.personne.nom,
       prenom: comment.auth.personne.prenom,
       photo_profil_url: comment.auth.personne.photo_profil_url,

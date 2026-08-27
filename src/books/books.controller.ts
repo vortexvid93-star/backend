@@ -54,6 +54,7 @@ import { BookStreamQueryDto } from './dto/book-stream-query.dto';
 import { BooksCatalogQueryDto } from './dto/books-catalog-query.dto';
 import { CommentsQueryDto } from './dto/comments-query.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { ReportCommentDto } from './dto/report-comment.dto';
 import { RateBookDto } from './dto/rate-book.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { RecentAccessQueryDto } from './dto/recent-access-query.dto';
@@ -270,6 +271,18 @@ export class BooksController {
     @Param('commentId', ParseUUIDPipe) commentId: string,
   ) {
     return this.social.deleteComment(user.sub, id, commentId);
+  }
+
+  /** Signalement d'un avis (obligation contenu généré par les utilisateurs). */
+  @Post(':id/comments/:commentId/report')
+  @HttpCode(HttpStatus.OK)
+  reportComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+    @Body() dto: ReportCommentDto,
+  ) {
+    return this.social.reportComment(user.sub, id, commentId, dto);
   }
 
   @Post(':id/rate')
